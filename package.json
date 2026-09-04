@@ -1,0 +1,92 @@
+{
+  "name": "ai-draw",
+  "displayName": "AI Live Draw",
+  "description": "Minimalist hand-drawn live visual canvas for AI conversation planning & architecture diagrams",
+  "version": "1.3.0",
+  "publisher": "rampravesh",
+  "author": "Rampravesh <rampraveshkr4545@gmail.com>",
+  "license": "MIT",
+  "icon": "dist/icon.png",
+  "keywords": [
+    "whiteboard",
+    "excalidraw",
+    "live-draw",
+    "ai",
+    "diagram",
+    "architecture",
+    "flowchart",
+    "handwritten",
+    "antigravity"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization",
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiDraw.openCanvas",
+        "title": "AI Draw: Open Live Visual Canvas",
+        "category": "AI Draw",
+        "icon": "$(paintcan)"
+      },
+      {
+        "command": "aiDraw.toggleSync",
+        "title": "AI Draw: Toggle Live Sync",
+        "category": "AI Draw"
+      },
+      {
+        "command": "aiDraw.newDiagram",
+        "title": "AI Draw: Initialize New Plan",
+        "category": "AI Draw"
+      },
+      {
+        "command": "aiDraw.clearCanvas",
+        "title": "AI Draw: Clear Canvas",
+        "category": "AI Draw"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "aiDraw.openCanvas"
+        },
+        {
+          "command": "aiDraw.toggleSync"
+        },
+        {
+          "command": "aiDraw.newDiagram"
+        },
+        {
+          "command": "aiDraw.clearCanvas"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "aiDraw.openCanvas",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.js --production",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "build": "node esbuild.js --production"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.4.0"
+  }
+}
