@@ -93,9 +93,14 @@ export class LiveSyncService {
       }
     }
 
-    // 2. Any recent workspaces user switched to or opened
+    // 2. Any recent workspaces user switched to or opened (excluding internal IDE folders)
     for (const p of this.recentWorkspaces) {
-      if (!map.has(p) && fs.existsSync(p)) {
+      if (
+        !map.has(p) &&
+        fs.existsSync(p) &&
+        !p.includes(".gemini") &&
+        !p.includes(".antigravity-ide")
+      ) {
         map.set(p, {
           name: path.basename(p),
           path: p,

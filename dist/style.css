@@ -550,223 +550,114 @@ body.theme-light #inline-text-editor {
   justify-content: space-between;
 }
 
-/* Quick Workspace & Diagram Header Dropdown */
-.workspace-file-selector {
-  position: relative;
+/* Sidebar Tab 2: Diagram Files & Workspace Manager */
+.sidebar-section {
   display: flex;
-  align-items: center;
-}
-
-.selector-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 3px 10px;
-  cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
-  color: var(--text-primary);
-  font-family: var(--font-ui);
-}
-
-.selector-btn:hover {
-  background-color: var(--bg-btn-hover);
-  border-color: #38bdf8;
-}
-
-.ws-badge {
-  font-size: 11px;
-  font-weight: 600;
-  color: #38bdf8;
-  max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.selector-chevron {
-  font-size: 10px;
-  color: var(--text-secondary);
-  transition: transform 0.15s ease;
-}
-
-.workspace-file-selector.open .selector-chevron {
-  transform: rotate(180deg);
-}
-
-.selector-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  width: 310px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-  z-index: 100;
-  display: none;
   flex-direction: column;
-  padding: 6px 0;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
-.workspace-file-selector.open .selector-dropdown {
-  display: flex;
+.sidebar-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 10px 0;
 }
 
-.dropdown-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 12px 4px 12px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-}
-
-.dropdown-action-btn {
+.action-btn-text {
   background: transparent;
   border: none;
   color: #38bdf8;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
   transition: background-color 0.1s ease;
 }
 
-.dropdown-action-btn:hover {
+.action-btn-text:hover {
   background-color: rgba(56, 189, 248, 0.15);
 }
 
-.dropdown-divider {
-  height: 1px;
-  background-color: var(--border-color);
-  margin: 6px 0;
-}
-
-.dropdown-list {
+.workspace-selector-box {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 160px;
-  overflow-y: auto;
-  padding: 0 6px;
+  gap: 4px;
 }
 
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.12s ease;
+.sidebar-select {
+  width: 100%;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   color: var(--text-primary);
+  font-family: var(--font-ui);
   font-size: 12px;
-  gap: 8px;
-}
-
-.dropdown-item:hover {
-  background-color: var(--bg-btn-hover);
-}
-
-.dropdown-item.active {
-  background-color: rgba(56, 189, 248, 0.12);
-  border-left: 2px solid #38bdf8;
-}
-
-.dropdown-item-main {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-
-.dropdown-item-name {
   font-weight: 500;
+  padding: 7px 10px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+
+.sidebar-select:hover,
+.sidebar-select:focus {
+  border-color: #38bdf8;
+}
+
+.workspace-path-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 0 2px;
 }
 
-.dropdown-item-badge {
-  font-size: 10px;
-  color: var(--text-secondary);
-  background: var(--bg-app);
-  padding: 1px 6px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  white-space: nowrap;
-}
-
-.dropdown-item-del {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 12px;
-  transition: color 0.1s ease, background-color 0.1s ease;
-}
-
-.dropdown-item-del:hover {
-  color: #ef4444;
-  background-color: rgba(239, 68, 68, 0.15);
-}
-
-/* Sidebar Tab 2: Diagram Files Manager */
-.active-ws-banner {
+/* Inline Create Plan Form (Zero Popup / Zero Prompt) */
+.inline-create-box {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
   background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px dashed #38bdf8;
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 10px;
   margin-top: 4px;
 }
 
-.ws-banner-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.ws-banner-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.ws-banner-name {
+.sidebar-input {
+  width: 100%;
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
   font-size: 12px;
-  font-weight: 600;
-  color: #38bdf8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.12s ease;
 }
 
+.sidebar-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
+}
+
+.inline-create-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-hand);
+}
+
+/* Diagrams List */
 .diagrams-list {
   display: flex;
   flex-direction: column;
@@ -825,16 +716,25 @@ body.theme-light #inline-text-editor {
 
 .diagram-delete-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #a1a1aa;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   padding: 3px 6px;
   border-radius: 4px;
-  transition: color 0.1s ease, background-color 0.1s ease;
+  transition: all 0.12s ease;
+  white-space: nowrap;
 }
 
 .diagram-delete-btn:hover {
   color: #ef4444;
   background-color: rgba(239, 68, 68, 0.15);
+}
+
+.diagram-delete-btn.confirming {
+  background-color: #ef4444;
+  color: #ffffff;
+  border-color: #dc2626;
+  font-weight: 600;
+  font-size: 11px;
 }

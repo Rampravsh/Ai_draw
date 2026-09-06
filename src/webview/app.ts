@@ -31,22 +31,18 @@ class WebviewApp {
   private statusDot: HTMLElement;
   private statusText: HTMLElement;
 
-  // Top Bar Workspace & File Dropdown Elements
-  private workspaceFileSelector: HTMLElement;
-  private btnFileSelector: HTMLElement;
-  private headerWsBadge: HTMLElement;
-  private headerFileBadge: HTMLElement;
-  private dropdownWorkspacesList: HTMLElement;
-  private dropdownDiagramsList: HTMLElement;
-  private btnBrowseFolder: HTMLElement;
-  private btnQuickNewDiagram: HTMLElement;
-
   // Sidebar Elements
   private inspectorSidebar: HTMLElement;
   private colorSwatches: HTMLElement;
+  private workspaceSelect: HTMLSelectElement;
+  private workspacePathHint: HTMLElement;
+  private btnBrowseWorkspace: HTMLElement;
+  private btnShowCreatePlan: HTMLElement;
+  private inlineCreateBox: HTMLElement;
+  private newPlanInput: HTMLInputElement;
+  private btnConfirmCreatePlan: HTMLElement;
+  private btnCancelCreatePlan: HTMLElement;
   private diagramsList: HTMLElement;
-  private sidebarWsName: HTMLElement;
-  private btnSidebarSwitchWs: HTMLElement;
 
   // Inline Direct Text Editor Elements
   private inlineEditorContainer: HTMLElement;
@@ -67,22 +63,18 @@ class WebviewApp {
     this.statusDot = document.getElementById("status-dot")!;
     this.statusText = document.getElementById("status-text")!;
 
-    // Dropdown Elements
-    this.workspaceFileSelector = document.getElementById("workspace-file-selector")!;
-    this.btnFileSelector = document.getElementById("btn-file-selector")!;
-    this.headerWsBadge = document.getElementById("header-ws-badge")!;
-    this.headerFileBadge = document.getElementById("header-file-badge")!;
-    this.dropdownWorkspacesList = document.getElementById("dropdown-workspaces-list")!;
-    this.dropdownDiagramsList = document.getElementById("dropdown-diagrams-list")!;
-    this.btnBrowseFolder = document.getElementById("btn-browse-folder")!;
-    this.btnQuickNewDiagram = document.getElementById("btn-quick-new-diagram")!;
-
     // Sidebar Elements
     this.inspectorSidebar = document.getElementById("inspector-sidebar")!;
     this.colorSwatches = document.getElementById("color-swatches")!;
+    this.workspaceSelect = document.getElementById("workspace-select") as HTMLSelectElement;
+    this.workspacePathHint = document.getElementById("workspace-path-hint")!;
+    this.btnBrowseWorkspace = document.getElementById("btn-browse-workspace")!;
+    this.btnShowCreatePlan = document.getElementById("btn-show-create-plan")!;
+    this.inlineCreateBox = document.getElementById("inline-create-box")!;
+    this.newPlanInput = document.getElementById("new-plan-input") as HTMLInputElement;
+    this.btnConfirmCreatePlan = document.getElementById("btn-confirm-create-plan")!;
+    this.btnCancelCreatePlan = document.getElementById("btn-cancel-create-plan")!;
     this.diagramsList = document.getElementById("diagrams-list")!;
-    this.sidebarWsName = document.getElementById("sidebar-ws-name")!;
-    this.btnSidebarSwitchWs = document.getElementById("btn-sidebar-switch-ws")!;
 
     // Inline Editor
     this.inlineEditorContainer = document.getElementById("inline-text-editor-container")!;
@@ -102,8 +94,8 @@ class WebviewApp {
     );
 
     this.setupToolbar();
-    this.setupWorkspaceDropdown();
     this.setupSidebar();
+    this.setupInlinePlanCreation();
     this.setupInlineEditor();
     this.setupDragAndDrop();
     this.setupKeyboardShortcuts();
@@ -212,48 +204,6 @@ class WebviewApp {
     });
   }
 
-  private setupWorkspaceDropdown() {
-    this.btnFileSelector?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.workspaceFileSelector.classList.toggle("open");
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!this.workspaceFileSelector.contains(e.target as Node)) {
-        this.closeDropdown();
-      }
-    });
-
-    this.btnBrowseFolder?.addEventListener("click", () => {
-      this.closeDropdown();
-      this.vscode.postMessage({ type: "browseWorkspace" });
-    });
-
-    this.btnQuickNewDiagram?.addEventListener("click", () => {
-      this.closeDropdown();
-      this.promptAndCreateNewDiagram();
-    });
-
-    this.btnSidebarSwitchWs?.addEventListener("click", () => {
-      this.vscode.postMessage({ type: "browseWorkspace" });
-    });
-  }
-
-  private closeDropdown() {
-    this.workspaceFileSelector.classList.remove("open");
-  }
-
-  private promptAndCreateNewDiagram() {
-    const title = prompt("Enter a name for the new plan (e.g. Backend Architecture, User Flow):", "");
-    if (title && title.trim().length > 0) {
-      this.vscode.postMessage({
-        type: "newDiagram",
-        title: title.trim(),
-      });
-      this.showTemporaryStatus("Creating plan...");
-    }
-  }
-
   private setupSidebar() {
     // Tabs
     const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
@@ -273,6 +223,23 @@ class WebviewApp {
           this.vscode.postMessage({ type: "listDiagrams" });
         }
       });
+    });
+
+    // Project Workspace Dropdown Selector
+    this.workspaceSelect?.addEventListener("change", () => {
+      const selectedPath = this.workspaceSelect.value;
+      if (selectedPath && selectedPath !== this.activeWorkspacePath) {
+        this.vscode.postMessage({
+          type: "switchWorkspace",
+          workspacePath: selectedPath,
+        });
+        this.showTemporaryStatus("Switching project...");
+      }
+    });
+
+    // Browse Workspace Folder
+    this.btnBrowseWorkspace?.addEventListener("click", () => {
+      this.vscode.postMessage({ type: "browseWorkspace" });
     });
 
     // Shape Palette Click
@@ -341,10 +308,48 @@ class WebviewApp {
       this.liveCanvas.deleteSelectedNode();
       this.showTemporaryStatus("Deleted (Ctrl+Z to Undo)");
     });
+  }
 
-    // New Diagram File from sidebar
-    document.getElementById("btn-new-file")?.addEventListener("click", () => {
-      this.promptAndCreateNewDiagram();
+  // Pure Inline Plan Creation (Zero Prompt, Zero Dialog — Works 100% in Webview)
+  private setupInlinePlanCreation() {
+    this.btnShowCreatePlan?.addEventListener("click", () => {
+      const isVisible = this.inlineCreateBox.style.display === "flex";
+      this.inlineCreateBox.style.display = isVisible ? "none" : "flex";
+      if (!isVisible) {
+        this.newPlanInput.value = "";
+        this.newPlanInput.focus();
+      }
+    });
+
+    this.btnCancelCreatePlan?.addEventListener("click", () => {
+      this.inlineCreateBox.style.display = "none";
+      this.newPlanInput.value = "";
+    });
+
+    const submitCreatePlan = () => {
+      const val = this.newPlanInput.value.trim();
+      if (val.length > 0) {
+        this.vscode.postMessage({
+          type: "newDiagram",
+          title: val,
+        });
+        this.newPlanInput.value = "";
+        this.inlineCreateBox.style.display = "none";
+        this.showTemporaryStatus("Creating plan...");
+      }
+    };
+
+    this.btnConfirmCreatePlan?.addEventListener("click", submitCreatePlan);
+
+    this.newPlanInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitCreatePlan();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.inlineCreateBox.style.display = "none";
+        this.newPlanInput.value = "";
+      }
     });
   }
 
@@ -616,7 +621,6 @@ class WebviewApp {
               Boolean(msg.plan.filename) && msg.plan.filename !== this.activeDiagramName;
             if (msg.plan.filename) {
               this.activeDiagramName = msg.plan.filename;
-              this.headerFileBadge.textContent = `📄 ${this.activeDiagramName}`;
             }
 
             this.liveCanvas.loadPlan(msg.plan, isDifferentFile);
@@ -689,90 +693,27 @@ class WebviewApp {
     this.diagramDetails = details;
     this.availableWorkspaces = workspaces;
 
-    // Update Header Badges
-    this.headerWsBadge.textContent = `📁 ${activeWs.name}`;
-    this.headerFileBadge.textContent = `📄 ${activeDiagram}`;
-    this.sidebarWsName.textContent = activeWs.name;
-
-    // 1. Render Dropdown Workspaces List
-    this.dropdownWorkspacesList.innerHTML = "";
-    workspaces.forEach((ws) => {
-      const item = document.createElement("div");
-      item.className = `dropdown-item ${ws.isCurrent ? "active" : ""}`;
-      item.title = ws.path;
-
-      const main = document.createElement("div");
-      main.className = "dropdown-item-main";
-      main.innerHTML = `<span style="color:#38bdf8;">📁</span> <span class="dropdown-item-name">${ws.name}</span>`;
-
-      const badge = document.createElement("span");
-      badge.className = "dropdown-item-badge";
-      badge.textContent = `${ws.diagramCount} plan${ws.diagramCount === 1 ? "" : "s"}`;
-
-      item.appendChild(main);
-      item.appendChild(badge);
-
-      item.addEventListener("click", () => {
-        this.closeDropdown();
-        if (!ws.isCurrent) {
-          this.vscode.postMessage({
-            type: "switchWorkspace",
-            workspacePath: ws.path,
-          });
-          this.showTemporaryStatus(`Switching to ${ws.name}...`);
+    // 1. Populate Workspace Selector Dropdown in Sidebar
+    if (this.workspaceSelect) {
+      this.workspaceSelect.innerHTML = "";
+      workspaces.forEach((ws) => {
+        const opt = document.createElement("option");
+        opt.value = ws.path;
+        opt.textContent = `${ws.name} (${ws.diagramCount} plan${ws.diagramCount === 1 ? "" : "s"})`;
+        if (ws.path === activeWs.path || ws.isCurrent) {
+          opt.selected = true;
         }
+        this.workspaceSelect.appendChild(opt);
       });
+    }
 
-      this.dropdownWorkspacesList.appendChild(item);
-    });
+    // 2. Update Workspace Path Display
+    if (this.workspacePathHint) {
+      this.workspacePathHint.textContent = activeWs.path || "No folder open";
+      this.workspacePathHint.title = activeWs.path || "";
+    }
 
-    // 2. Render Dropdown Diagrams List
-    this.dropdownDiagramsList.innerHTML = "";
-    details.forEach((d) => {
-      const item = document.createElement("div");
-      const isActive = d.filename === activeDiagram;
-      item.className = `dropdown-item ${isActive ? "active" : ""}`;
-
-      const main = document.createElement("div");
-      main.className = "dropdown-item-main";
-      main.innerHTML = `<span>📄</span> <span class="dropdown-item-name" title="${d.filename}">${d.title}</span>`;
-
-      const badge = document.createElement("span");
-      badge.className = "dropdown-item-badge";
-      badge.textContent = `${d.nodeCount} node${d.nodeCount === 1 ? "" : "s"}`;
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "dropdown-item-del";
-      delBtn.innerHTML = "✕";
-      delBtn.title = `Delete ${d.filename}`;
-      delBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (confirm(`Delete diagram "${d.title}" (${d.filename})? This action cannot be undone.`)) {
-          this.vscode.postMessage({
-            type: "deleteDiagram",
-            filename: d.filename,
-          });
-        }
-      });
-
-      main.addEventListener("click", () => {
-        this.closeDropdown();
-        if (!isActive) {
-          this.vscode.postMessage({
-            type: "switchDiagram",
-            filename: d.filename,
-          });
-          this.showTemporaryStatus(`Loading ${d.title}...`);
-        }
-      });
-
-      item.appendChild(main);
-      item.appendChild(badge);
-      item.appendChild(delBtn);
-      this.dropdownDiagramsList.appendChild(item);
-    });
-
-    // 3. Render Sidebar Diagrams Tab List
+    // 3. Render Diagrams List in Sidebar
     this.diagramsList.innerHTML = "";
     details.forEach((d) => {
       const item = document.createElement("div");
@@ -786,7 +727,7 @@ class WebviewApp {
         <div class="diagram-subtext">
           <span>📄 ${d.filename}</span>
           <span>•</span>
-          <span>${d.nodeCount} nodes</span>
+          <span>${d.nodeCount} node${d.nodeCount === 1 ? "" : "s"}</span>
         </div>
       `;
 
@@ -800,17 +741,33 @@ class WebviewApp {
         }
       });
 
+      // 2-Step Inline Safe Delete (Zero Window.confirm popup block!)
       const delBtn = document.createElement("button");
       delBtn.className = "diagram-delete-btn";
       delBtn.innerHTML = "✕";
       delBtn.title = `Delete ${d.filename}`;
+
+      let confirmTimer: number | null = null;
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (confirm(`Delete diagram "${d.title}" (${d.filename})? This action cannot be undone.`)) {
+        if (!delBtn.classList.contains("confirming")) {
+          // First click: Request confirmation
+          delBtn.classList.add("confirming");
+          delBtn.textContent = "Delete?";
+          confirmTimer = window.setTimeout(() => {
+            delBtn.classList.remove("confirming");
+            delBtn.textContent = "✕";
+            confirmTimer = null;
+          }, 4000);
+        } else {
+          // Second click: Confirmed delete!
+          if (confirmTimer) clearTimeout(confirmTimer);
+          delBtn.classList.remove("confirming");
           this.vscode.postMessage({
             type: "deleteDiagram",
             filename: d.filename,
           });
+          this.showTemporaryStatus(`Deleted ${d.filename}`);
         }
       });
 

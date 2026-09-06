@@ -269,10 +269,16 @@ function openLiveCanvasPanel(context: vscode.ExtensionContext) {
           break;
         }
         case "browseWorkspace": {
+          const currentDir = liveSyncService?.activeWorkspacePath;
+          const defaultUri = currentDir && fs.existsSync(currentDir)
+            ? vscode.Uri.file(path.dirname(currentDir))
+            : vscode.Uri.file("F:\\");
+
           vscode.window.showOpenDialog({
             canSelectFiles: false,
             canSelectFolders: true,
             canSelectMany: false,
+            defaultUri,
             openLabel: "Select Project / Workspace Folder",
           }).then((folders) => {
             if (folders && folders.length > 0 && liveSyncService && currentPanel) {
