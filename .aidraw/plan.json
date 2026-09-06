@@ -1,5 +1,5 @@
 {
-  "title": "AI Live Draw Engine — Complete Creative Freedom",
+  "title": "Interactive Arrow & Eraser Demo",
   "filename": "plan.json",
   "theme": "dark",
   "grid": "graph",
@@ -7,152 +7,64 @@
   "layout": "manual",
   "nodes": [
     {
-      "id": "browser-ui",
+      "id": "node-1",
       "type": "browser",
-      "x": 60,
-      "y": 60,
-      "width": 250,
+      "x": 80,
+      "y": 100,
+      "width": 240,
       "height": 160,
       "icon": "🌐",
-      "title": "Webview Canvas",
-      "text": "Antigravity Live Whiteboard\nZero-latency reactive canvas",
+      "title": "Frontend Client",
+      "text": "Try Arrow tool: Drag from here\nacross to the Server!",
       "color": "purple",
-      "status": "completed",
-      "badge": "V1.3.0"
-    },
-    {
-      "id": "dev-cli",
-      "type": "terminal",
-      "x": 60,
-      "y": 280,
-      "width": 250,
-      "height": 150,
-      "icon": "💻",
-      "title": "Developer Terminal",
-      "text": ">_ agy pair programmer\nLocal real-time runner",
-      "color": "default",
-      "status": "active"
-    },
-    {
-      "id": "firewall",
-      "type": "shield",
-      "x": 380,
-      "y": 65,
-      "width": 160,
-      "height": 150,
-      "icon": "🛡️",
-      "title": "Security Shield",
-      "text": "Workspace Guard\nIsolated local file access",
-      "color": "green",
       "status": "active",
-      "badge": "SECURE"
+      "badge": "DRAG ME"
     },
     {
-      "id": "ai-brain",
-      "type": "hexagon",
-      "x": 620,
-      "y": 60,
-      "width": 210,
-      "height": 160,
-      "icon": "🧠",
-      "title": "AI Creative Engine",
-      "text": "100% Freeform Drawing\nAny shape • Any arrow • Any SVG",
-      "color": "amber",
-      "status": "active",
-      "badge": "UNRESTRICTED"
-    },
-    {
-      "id": "server-cluster",
+      "id": "node-2",
       "type": "server",
-      "x": 900,
-      "y": 60,
-      "width": 210,
+      "x": 480,
+      "y": 100,
+      "width": 220,
       "height": 160,
       "icon": "⚡",
-      "title": "LiveSync Server",
-      "text": "Event watcher & router\nInstant multi-file sync",
+      "title": "App Server",
+      "text": "Click the arrow to select it,\nthen drag its handles to resize!",
       "color": "blue",
       "status": "completed"
     },
     {
-      "id": "freeform-geometry",
-      "type": "custom",
-      "x": 620,
-      "y": 280,
-      "width": 210,
-      "height": 150,
-      "icon": "✨",
-      "title": "Vector SVG Geometry",
-      "text": "Arbitrary polygon & curves\nInfinite visual freedom",
-      "color": "rose",
-      "svgPath": "M 20 20 L 190 20 L 200 75 L 190 130 L 20 130 L 10 75 Z",
-      "customFill": "#2e1065",
-      "customStroke": "#a855f7"
-    },
-    {
-      "id": "data-store",
+      "id": "node-3",
       "type": "database",
-      "x": 905,
-      "y": 280,
+      "x": 490,
+      "y": 340,
       "width": 200,
-      "height": 140,
+      "height": 130,
       "icon": "💾",
-      "title": "Local JSON Store",
-      "text": ".aidraw/plan.json\nAuto-persisted workspace state",
-      "color": "purple",
+      "title": "Database",
+      "text": "Select Erase tool (E)\nand swipe across to delete!",
+      "color": "green",
       "status": "completed"
     }
   ],
   "edges": [
     {
-      "id": "e1",
-      "from": "browser-ui",
-      "to": "firewall",
-      "label": "Webview Event",
+      "id": "edge-1",
+      "from": "node-1",
+      "to": "node-2",
+      "label": "Click to select & resize!",
       "style": "animated",
       "routing": "straight"
     },
     {
-      "id": "e2",
-      "from": "dev-cli",
-      "to": "firewall",
-      "label": "CLI Stream",
-      "style": "dashed",
-      "routing": "curved"
-    },
-    {
-      "id": "e3",
-      "from": "firewall",
-      "to": "ai-brain",
-      "label": "Prompt / Goal",
-      "style": "animated",
-      "routing": "straight"
-    },
-    {
-      "id": "e4",
-      "from": "ai-brain",
-      "to": "server-cluster",
-      "label": "Live Sketch Data",
-      "style": "neon",
-      "routing": "straight"
-    },
-    {
-      "id": "e5",
-      "from": "ai-brain",
-      "to": "freeform-geometry",
-      "label": "Vector Engine",
-      "style": "dotted",
-      "routing": "straight"
-    },
-    {
-      "id": "e6",
-      "from": "server-cluster",
-      "to": "data-store",
-      "label": "Read / Write Sync",
+      "id": "edge-2",
+      "from": "node-2",
+      "to": "node-3",
+      "label": "Swipe to Erase",
       "style": "animated",
       "routing": "elbow",
       "bidirectional": true
     }
   ],
-  "updatedAt": "2026-09-06T20:38:00.000Z"
+  "updatedAt": "2026-09-06T20:50:00.000Z"
 }

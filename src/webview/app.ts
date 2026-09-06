@@ -495,7 +495,7 @@ class WebviewApp {
   }
 
   public setActiveTool(tool: ToolMode) {
-    this.liveCanvas.toolMode = tool;
+    this.liveCanvas.setTool(tool);
     document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((btn) => {
       if (btn.getAttribute("data-tool") === tool) {
         btn.classList.add("active");
@@ -578,10 +578,9 @@ class WebviewApp {
         return;
       }
 
-      // Delete selected
+      // Delete selected node or edge
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (this.liveCanvas.selectedNodeId) {
-          this.liveCanvas.deleteSelectedNode();
+        if (this.liveCanvas.deleteSelected()) {
           this.showTemporaryStatus("Deleted (Ctrl+Z to Undo)");
         }
       }

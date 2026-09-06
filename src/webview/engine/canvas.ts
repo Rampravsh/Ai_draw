@@ -61,8 +61,21 @@ export class LiveCanvas {
   private resizeMouseStartX: number = 0;
   private resizeMouseStartY: number = 0;
 
-  // Arrow creation state
-  private arrowSourceNodeId: string | null = null;
+  // Selected Edge State (for adjusting arrow length & endpoints)
+  public selectedEdgeIndex: number | null = null;
+  private edgeDraggingHandle: "start" | "end" | null = null;
+
+  // Arrow creation state (Drag from anywhere to anywhere)
+  private isDrawingArrow: boolean = false;
+  private arrowDragStart: { x: number; y: number } | null = null;
+  private arrowCurrentEnd: { x: number; y: number } | null = null;
+  private arrowStartNodeId: string | null = null;
+  private hoverTargetNodeId: string | null = null;
+
+  // Eraser Swipe State (Industry-level drag-to-erase)
+  private isErasing: boolean = false;
+  private eraserTrail: { x: number; y: number }[] = [];
+  private hasErasedInCurrentStroke: boolean = false;
 
   // Animation
   private animOffset: number = 0;
@@ -229,8 +242,217 @@ export class LiveCanvas {
     return this.plan;
   }
 
+  public get toolMode(): ToolMode {
+    return this.currentTool;
+  }
+
+  public set toolMode(tool: ToolMode) {
+    this.setTool(tool);
+  }
+
+  public setTool(tool: ToolMode) {
+    this.currentTool = tool;
+    if (tool !== "select") {
+      this.selectedNodeId = null;
+      this.selectedEdgeIndex = null;
+      this.notifySelectionChange(null);
+    }
+    this.updateCursor();
+    this.render();
+  }
+
+  public updateCursor() {
+    const c = this.canvas;
+    if (this.currentTool === "pan") {
+      c.style.cursor = this.isDragging ? "grabbing" : "grab";
+    } else if (this.currentTool === "arrow") {
+      c.style.cursor = "crosshair";
+    } else if (this.currentTool === "eraser") {
+      c.style.cursor = "cell";
+    } else {
+      c.style.cursor = "default";
+    }
+  }
+
+  public deleteSelected(): boolean {
+    if (this.selectedNodeId) {
+      this.deleteSelectedNode();
+      return true;
+    }
+    if (this.selectedEdgeIndex !== null && this.plan.edges && this.plan.edges[this.selectedEdgeIndex]) {
+      this.recordHistory();
+      this.plan.edges.splice(this.selectedEdgeIndex, 1);
+      this.selectedEdgeIndex = null;
+      this.notifyPlanChange();
+      this.render();
+      return true;
+    }
+    return false;
+  }
+
+  public getEdgeEndpoints(edge: CanvasEdge): { x1: number; y1: number; x2: number; y2: number } | null {
+    const nodeMap = new Map<string, CanvasNode>();
+    for (const n of this.plan.nodes) {
+      nodeMap.set(n.id, n);
+    }
+
+    const src = edge.from ? nodeMap.get(edge.from) : undefined;
+    const tgt = edge.to ? nodeMap.get(edge.to) : undefined;
+
+    if (src && tgt) {
+      return getArrowEndpoints(src, tgt);
+    } else if (src && typeof edge.endX === "number" && typeof edge.endY === "number") {
+      const vTgt: CanvasNode = {
+        id: "_v_tgt",
+        type: "card",
+        x: edge.endX - 4,
+        y: edge.endY - 4,
+        width: 8,
+        height: 8,
+        title: "",
+      };
+      const pts = getArrowEndpoints(src, vTgt);
+      return { x1: pts.x1, y1: pts.y1, x2: edge.endX, y2: edge.endY };
+    } else if (tgt && typeof edge.startX === "number" && typeof edge.startY === "number") {
+      const vSrc: CanvasNode = {
+        id: "_v_src",
+        type: "card",
+        x: edge.startX - 4,
+        y: edge.startY - 4,
+        width: 8,
+        height: 8,
+        title: "",
+      };
+      const pts = getArrowEndpoints(vSrc, tgt);
+      return { x1: edge.startX, y1: edge.startY, x2: pts.x2, y2: pts.y2 };
+    } else if (
+      typeof edge.startX === "number" &&
+      typeof edge.startY === "number" &&
+      typeof edge.endX === "number" &&
+      typeof edge.endY === "number"
+    ) {
+      return { x1: edge.startX, y1: edge.startY, x2: edge.endX, y2: edge.endY };
+    }
+    return null;
+  }
+
+  public findEdgeAt(wx: number, wy: number, threshold: number = 14): number | null {
+    if (!this.plan.edges) return null;
+    const hitRadius = threshold / this.zoom;
+
+    for (let i = this.plan.edges.length - 1; i >= 0; i--) {
+      const edge = this.plan.edges[i];
+      const pts = this.getEdgeEndpoints(edge);
+      if (!pts) continue;
+
+      const dist = this.distToSegment(wx, wy, pts.x1, pts.y1, pts.x2, pts.y2);
+      if (dist <= hitRadius) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  private distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 === 0) return Math.hypot(px - x1, py - y1);
+    let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const projX = x1 + t * (x2 - x1);
+    const projY = y1 + t * (y2 - y1);
+    return Math.hypot(px - projX, py - projY);
+  }
+
+  public findEdgeHandleAt(edge: CanvasEdge, wx: number, wy: number): "start" | "end" | null {
+    const pts = this.getEdgeEndpoints(edge);
+    if (!pts) return null;
+    const handleHitRadius = 14 / this.zoom;
+
+    if (Math.hypot(wx - pts.x1, wy - pts.y1) <= handleHitRadius) {
+      return "start";
+    }
+    if (Math.hypot(wx - pts.x2, wy - pts.y2) <= handleHitRadius) {
+      return "end";
+    }
+    return null;
+  }
+
+  public drawEdgeHandles(x1: number, y1: number, x2: number, y2: number) {
+    const ctx = this.ctx;
+    ctx.save();
+    const handleRadius = Math.max(5, 7 / this.zoom);
+
+    // Start handle (white circle)
+    ctx.beginPath();
+    ctx.arc(x1, y1, handleRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, 2 / this.zoom);
+    ctx.strokeStyle = "#0284c7";
+    ctx.stroke();
+
+    // End handle (cyan circle)
+    ctx.beginPath();
+    ctx.arc(x2, y2, handleRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "#38bdf8";
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, 2 / this.zoom);
+    ctx.strokeStyle = "#0369a1";
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  private eraseAtPoint(wx: number, wy: number) {
+    const eraserRadius = 18 / this.zoom;
+    let modified = false;
+
+    // 1. Check if hit any node
+    const hitNode = this.findNodeAt(wx, wy);
+    if (hitNode) {
+      if (!this.hasErasedInCurrentStroke) {
+        this.recordHistory();
+        this.hasErasedInCurrentStroke = true;
+      }
+      this.plan.nodes = this.plan.nodes.filter((n) => n.id !== hitNode.id);
+      if (this.plan.edges) {
+        this.plan.edges = this.plan.edges.filter(
+          (edge) => edge.from !== hitNode.id && edge.to !== hitNode.id
+        );
+      }
+      if (this.selectedNodeId === hitNode.id) {
+        this.setSelectedNodeId(null);
+      }
+      modified = true;
+    }
+
+    // 2. Check if hit any edge
+    const hitEdgeIdx = this.findEdgeAt(wx, wy, eraserRadius);
+    if (hitEdgeIdx !== null && this.plan.edges) {
+      if (!this.hasErasedInCurrentStroke) {
+        this.recordHistory();
+        this.hasErasedInCurrentStroke = true;
+      }
+      this.plan.edges.splice(hitEdgeIdx, 1);
+      if (this.selectedEdgeIndex === hitEdgeIdx) {
+        this.selectedEdgeIndex = null;
+      } else if (this.selectedEdgeIndex !== null && this.selectedEdgeIndex > hitEdgeIdx) {
+        this.selectedEdgeIndex--;
+      }
+      modified = true;
+    }
+
+    if (modified) {
+      this.notifyPlanChange(false);
+      this.render();
+    }
+  }
+
   public setSelectedNodeId(id: string | null) {
     this.selectedNodeId = id;
+    if (id) {
+      this.selectedEdgeIndex = null;
+    }
     const node = id ? this.plan.nodes.find((n) => n.id === id) || null : null;
     this.notifySelectionChange(node);
     this.render();
@@ -497,34 +719,40 @@ export class LiveCanvas {
       }
 
       if (this.plan.edges) {
-        for (const edge of this.plan.edges) {
-          const src = nodeMap.get(edge.from);
-          const tgt = nodeMap.get(edge.to);
-          if (src && tgt) {
-            const { x1, y1, x2, y2 } = getArrowEndpoints(src, tgt);
-            const arrowColor = edge.color
-              ? this.resolveColor(edge.color, isDark).border
-              : isDark
-              ? "#a1a1aa"
-              : "#52525b";
+        for (let i = 0; i < this.plan.edges.length; i++) {
+          const edge = this.plan.edges[i];
+          const pts = this.getEdgeEndpoints(edge);
+          if (!pts) continue;
 
-            this.renderer.drawBendableArrow(
-              x1,
-              y1,
-              x2,
-              y2,
-              edge.label,
-              edge.style || "solid",
-              edge.routing || "straight",
-              arrowColor,
-              this.animOffset,
-              this.defaultFont,
-              {
-                strokeWidth: edge.strokeWidth,
-                arrowStart: edge.arrowStart || edge.bidirectional,
-                arrowEnd: edge.arrowEnd !== false,
-              }
-            );
+          const isSelected = this.selectedEdgeIndex === i;
+          const arrowColor = isSelected
+            ? "#38bdf8"
+            : edge.color
+            ? this.resolveColor(edge.color, isDark).border
+            : isDark
+            ? "#a1a1aa"
+            : "#52525b";
+
+          this.renderer.drawBendableArrow(
+            pts.x1,
+            pts.y1,
+            pts.x2,
+            pts.y2,
+            edge.label,
+            edge.style || "solid",
+            edge.routing || "straight",
+            arrowColor,
+            this.animOffset,
+            this.defaultFont,
+            {
+              strokeWidth: isSelected ? (edge.strokeWidth || 2) + 1.2 : edge.strokeWidth,
+              arrowStart: edge.arrowStart || edge.bidirectional,
+              arrowEnd: edge.arrowEnd !== false,
+            }
+          );
+
+          if (isSelected) {
+            this.drawEdgeHandles(pts.x1, pts.y1, pts.x2, pts.y2);
           }
         }
       }
@@ -542,17 +770,67 @@ export class LiveCanvas {
         }
       }
 
-      // 4.4 Arrow Creation In Progress
-      if (this.currentTool === "arrow" && this.arrowSourceNodeId) {
-        const src = nodeMap.get(this.arrowSourceNodeId);
-        if (src) {
-          ctx.save();
-          ctx.strokeStyle = "#38bdf8";
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 4]);
-          ctx.strokeRect(src.x - 4, src.y - 4, src.width + 8, src.height + 8);
-          ctx.restore();
+      // 4.4 Live Arrow Creation Preview (Drawing from anywhere to anywhere)
+      if (this.isDrawingArrow && this.arrowDragStart && this.arrowCurrentEnd) {
+        const p1 = this.arrowDragStart;
+        const p2 = this.arrowCurrentEnd;
+
+        // Draw live animated arrow
+        this.renderer.drawBendableArrow(
+          p1.x,
+          p1.y,
+          p2.x,
+          p2.y,
+          undefined,
+          "animated",
+          "straight",
+          "#38bdf8",
+          this.animOffset,
+          this.defaultFont,
+          { strokeWidth: 2.5 }
+        );
+
+        // Snap highlight on target node
+        if (this.hoverTargetNodeId) {
+          const hovered = nodeMap.get(this.hoverTargetNodeId);
+          if (hovered) {
+            ctx.save();
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(hovered.x - 4, hovered.y - 4, hovered.width + 8, hovered.height + 8);
+            ctx.restore();
+          }
         }
+
+        // Highlight start node
+        if (this.arrowStartNodeId) {
+          const startNode = nodeMap.get(this.arrowStartNodeId);
+          if (startNode) {
+            ctx.save();
+            ctx.strokeStyle = "#22c55e";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(startNode.x - 4, startNode.y - 4, startNode.width + 8, startNode.height + 8);
+            ctx.restore();
+          }
+        }
+      }
+
+      // 4.5 Live Eraser Swipe Trail
+      if (this.isErasing && this.eraserTrail.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+        ctx.lineWidth = Math.max(14, 22 / this.zoom);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(this.eraserTrail[0].x, this.eraserTrail[0].y);
+        for (let i = 1; i < this.eraserTrail.length; i++) {
+          ctx.lineTo(this.eraserTrail[i].x, this.eraserTrail[i].y);
+        }
+        ctx.stroke();
+        ctx.restore();
       }
     } finally {
       ctx.restore();
@@ -1104,6 +1382,7 @@ export class LiveCanvas {
       const sy = e.clientY - rect.top;
       const world = this.screenToWorld(sx, sy);
 
+      // Pan tool or middle click or space key
       if (e.button === 1 || this.currentTool === "pan" || e.spaceKey) {
         this.isDragging = true;
         this.dragStartX = sx;
@@ -1112,80 +1391,95 @@ export class LiveCanvas {
         return;
       }
 
-      // Check resize handle on selected node
-      const selectedNode = this.getSelectedNode();
-      if (selectedNode) {
-        const handle = this.findResizeHandleAt(selectedNode, world.x, world.y);
-        if (handle) {
-          this.resizingHandle = handle;
-          this.resizeNodeStartRect = {
-            x: selectedNode.x,
-            y: selectedNode.y,
-            w: selectedNode.width,
-            h: selectedNode.height,
-          };
-          this.resizeMouseStartX = world.x;
-          this.resizeMouseStartY = world.y;
-          this.recordHistory();
-          return;
-        }
+      // ERASER TOOL (Click or swipe to erase nodes or arrows)
+      if (this.currentTool === "eraser") {
+        this.isErasing = true;
+        this.hasErasedInCurrentStroke = false;
+        this.eraserTrail = [{ x: world.x, y: world.y }];
+        this.eraseAtPoint(world.x, world.y);
+        return;
       }
 
-      const hitNode = this.findNodeAt(world.x, world.y);
+      // ARROW TOOL (Drag from anywhere to anywhere)
+      if (this.currentTool === "arrow") {
+        this.isDrawingArrow = true;
+        this.arrowDragStart = { x: world.x, y: world.y };
+        this.arrowCurrentEnd = { x: world.x, y: world.y };
+        const startNode = this.findNodeAt(world.x, world.y);
+        this.arrowStartNodeId = startNode ? startNode.id : null;
+        this.hoverTargetNodeId = null;
+        this.render();
+        return;
+      }
 
+      // SELECT TOOL
       if (this.currentTool === "select") {
+        // 1. Check resize handle on selected node
+        const selectedNode = this.getSelectedNode();
+        if (selectedNode) {
+          const handle = this.findResizeHandleAt(selectedNode, world.x, world.y);
+          if (handle) {
+            this.resizingHandle = handle;
+            this.resizeNodeStartRect = {
+              x: selectedNode.x,
+              y: selectedNode.y,
+              w: selectedNode.width,
+              h: selectedNode.height,
+            };
+            this.resizeMouseStartX = world.x;
+            this.resizeMouseStartY = world.y;
+            this.recordHistory();
+            return;
+          }
+        }
+
+        // 2. Check handle on selected edge
+        if (
+          this.selectedEdgeIndex !== null &&
+          this.plan.edges &&
+          this.plan.edges[this.selectedEdgeIndex]
+        ) {
+          const selectedEdge = this.plan.edges[this.selectedEdgeIndex];
+          const edgeHandle = this.findEdgeHandleAt(selectedEdge, world.x, world.y);
+          if (edgeHandle) {
+            this.edgeDraggingHandle = edgeHandle;
+            this.recordHistory();
+            return;
+          }
+        }
+
+        // 3. Check hit on node
+        const hitNode = this.findNodeAt(world.x, world.y);
         if (hitNode) {
           this.setSelectedNodeId(hitNode.id);
+          this.selectedEdgeIndex = null;
           this.draggingNode = hitNode;
           this.nodeDragOffsetX = world.x - hitNode.x;
           this.nodeDragOffsetY = world.y - hitNode.y;
           this.isDragging = true;
           this.recordHistory();
           c.style.cursor = "move";
-        } else {
+          this.render();
+          return;
+        }
+
+        // 4. Check hit on edge
+        const hitEdgeIdx = this.findEdgeAt(world.x, world.y);
+        if (hitEdgeIdx !== null) {
+          this.selectedEdgeIndex = hitEdgeIdx;
           this.setSelectedNodeId(null);
-          this.isDragging = true;
-          this.dragStartX = sx;
-          this.dragStartY = sy;
-          c.style.cursor = "grabbing";
+          this.render();
+          return;
         }
+
+        // 5. Blank space clicked -> deselect and pan
+        this.setSelectedNodeId(null);
+        this.selectedEdgeIndex = null;
+        this.isDragging = true;
+        this.dragStartX = sx;
+        this.dragStartY = sy;
+        c.style.cursor = "grabbing";
         this.render();
-      } else if (this.currentTool === "arrow") {
-        if (hitNode) {
-          if (!this.arrowSourceNodeId) {
-            this.arrowSourceNodeId = hitNode.id;
-            this.render();
-          } else if (this.arrowSourceNodeId !== hitNode.id) {
-            this.recordHistory();
-            if (!this.plan.edges) this.plan.edges = [];
-            this.plan.edges.push({
-              from: this.arrowSourceNodeId,
-              to: hitNode.id,
-              style: "animated",
-              routing: "straight",
-            });
-            this.arrowSourceNodeId = null;
-            this.currentTool = "select";
-            this.notifyPlanChange();
-            this.render();
-          }
-        } else {
-          this.arrowSourceNodeId = null;
-          this.render();
-        }
-      } else if (this.currentTool === "eraser") {
-        if (hitNode) {
-          this.recordHistory();
-          this.plan.nodes = this.plan.nodes.filter((n) => n.id !== hitNode.id);
-          if (this.plan.edges) {
-            this.plan.edges = this.plan.edges.filter(
-              (edge) => edge.from !== hitNode.id && edge.to !== hitNode.id
-            );
-          }
-          if (this.selectedNodeId === hitNode.id) this.setSelectedNodeId(null);
-          this.notifyPlanChange();
-          this.render();
-        }
       }
     });
 
@@ -1195,7 +1489,60 @@ export class LiveCanvas {
       const sy = e.clientY - rect.top;
       const world = this.screenToWorld(sx, sy);
 
-      // Handle Resizing
+      // ERASER dragging (Swipe erase)
+      if (this.isErasing) {
+        this.eraserTrail.push({ x: world.x, y: world.y });
+        if (this.eraserTrail.length > 30) this.eraserTrail.shift();
+        this.eraseAtPoint(world.x, world.y);
+        this.render();
+        return;
+      }
+
+      // ARROW drawing live drag
+      if (this.isDrawingArrow && this.arrowDragStart) {
+        this.arrowCurrentEnd = { x: world.x, y: world.y };
+        const hovered = this.findNodeAt(world.x, world.y);
+        this.hoverTargetNodeId = hovered ? hovered.id : null;
+        this.render();
+        return;
+      }
+
+      // EDGE handle dragging (customizing arrow length / angle / target)
+      if (
+        this.edgeDraggingHandle &&
+        this.selectedEdgeIndex !== null &&
+        this.plan.edges &&
+        this.plan.edges[this.selectedEdgeIndex]
+      ) {
+        const edge = this.plan.edges[this.selectedEdgeIndex];
+        const hovered = this.findNodeAt(world.x, world.y);
+
+        if (this.edgeDraggingHandle === "end") {
+          if (hovered && hovered.id !== edge.from) {
+            edge.to = hovered.id;
+            delete edge.endX;
+            delete edge.endY;
+          } else {
+            delete edge.to;
+            edge.endX = Math.round(world.x);
+            edge.endY = Math.round(world.y);
+          }
+        } else if (this.edgeDraggingHandle === "start") {
+          if (hovered && hovered.id !== edge.to) {
+            edge.from = hovered.id;
+            delete edge.startX;
+            delete edge.startY;
+          } else {
+            delete edge.from;
+            edge.startX = Math.round(world.x);
+            edge.startY = Math.round(world.y);
+          }
+        }
+        this.render();
+        return;
+      }
+
+      // Handle Node Resizing
       if (this.resizingHandle && this.resizeNodeStartRect) {
         const node = this.getSelectedNode();
         if (node) {
@@ -1260,6 +1607,35 @@ export class LiveCanvas {
       }
 
       // Cursor hover updates
+      if (this.currentTool === "eraser") {
+        c.style.cursor = "cell";
+        return;
+      } else if (this.currentTool === "arrow") {
+        c.style.cursor = "crosshair";
+        return;
+      } else if (this.currentTool === "pan") {
+        c.style.cursor = "grab";
+        return;
+      }
+
+      // Hover on edge handles
+      if (
+        this.selectedEdgeIndex !== null &&
+        this.plan.edges &&
+        this.plan.edges[this.selectedEdgeIndex]
+      ) {
+        const edgeHandle = this.findEdgeHandleAt(
+          this.plan.edges[this.selectedEdgeIndex],
+          world.x,
+          world.y
+        );
+        if (edgeHandle) {
+          c.style.cursor = "crosshair";
+          return;
+        }
+      }
+
+      // Hover on node resize handles
       const selectedNode = this.getSelectedNode();
       if (selectedNode) {
         const handle = this.findResizeHandleAt(selectedNode, world.x, world.y);
@@ -1273,14 +1649,15 @@ export class LiveCanvas {
       }
 
       const hit = this.findNodeAt(world.x, world.y);
-      if (hit && this.currentTool === "select") {
+      if (hit) {
         c.style.cursor = "move";
-      } else if (this.currentTool === "pan") {
-        c.style.cursor = "grab";
-      } else if (this.currentTool === "eraser") {
-        c.style.cursor = "crosshair";
       } else {
-        c.style.cursor = "default";
+        const hitEdge = this.findEdgeAt(world.x, world.y);
+        if (hitEdge !== null) {
+          c.style.cursor = "pointer";
+        } else {
+          c.style.cursor = "default";
+        }
       }
     });
 
@@ -1289,12 +1666,81 @@ export class LiveCanvas {
         c.releasePointerCapture(e.pointerId);
       } catch {}
 
+      // Finished ERASING stroke
+      if (this.isErasing) {
+        this.isErasing = false;
+        this.eraserTrail = [];
+        if (this.hasErasedInCurrentStroke) {
+          this.hasErasedInCurrentStroke = false;
+          this.notifyPlanChange();
+        }
+        this.updateCursor();
+        this.render();
+        return;
+      }
+
+      // Finished ARROW drawing
+      if (this.isDrawingArrow && this.arrowDragStart && this.arrowCurrentEnd) {
+        const p1 = this.arrowDragStart;
+        const p2 = this.arrowCurrentEnd;
+        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+        if (dist >= 12) {
+          this.recordHistory();
+          if (!this.plan.edges) this.plan.edges = [];
+          const endNode = this.findNodeAt(p2.x, p2.y);
+          const newEdge: CanvasEdge = {
+            id: "edge-" + Math.random().toString(36).substr(2, 6),
+            style: "animated",
+            routing: "straight",
+          };
+
+          if (this.arrowStartNodeId) {
+            newEdge.from = this.arrowStartNodeId;
+          } else {
+            newEdge.startX = Math.round(p1.x);
+            newEdge.startY = Math.round(p1.y);
+          }
+
+          if (endNode && endNode.id !== this.arrowStartNodeId) {
+            newEdge.to = endNode.id;
+          } else {
+            newEdge.endX = Math.round(p2.x);
+            newEdge.endY = Math.round(p2.y);
+          }
+
+          this.plan.edges.push(newEdge);
+          this.selectedEdgeIndex = this.plan.edges.length - 1;
+          this.selectedNodeId = null;
+          this.notifyPlanChange();
+        }
+
+        this.isDrawingArrow = false;
+        this.arrowDragStart = null;
+        this.arrowCurrentEnd = null;
+        this.arrowStartNodeId = null;
+        this.hoverTargetNodeId = null;
+        this.updateCursor();
+        this.render();
+        return;
+      }
+
+      // Finished Edge Handle Dragging
+      if (this.edgeDraggingHandle) {
+        this.edgeDraggingHandle = null;
+        this.notifyPlanChange();
+        this.render();
+        return;
+      }
+
+      // Finished Node Resizing
       if (this.resizingHandle) {
         this.resizingHandle = null;
         this.resizeNodeStartRect = null;
         this.notifyPlanChange();
       }
 
+      // Finished dragging / panning
       if (this.isDragging) {
         this.isDragging = false;
         if (this.draggingNode) {
@@ -1302,7 +1748,8 @@ export class LiveCanvas {
           this.notifyPlanChange();
         }
       }
-      c.style.cursor = this.currentTool === "pan" ? "grab" : "default";
+
+      this.updateCursor();
     });
 
     // Double-click triggers in-place inline text editing
