@@ -1,0 +1,110 @@
+{
+  "title": "AI Engine Architecture",
+  "filename": "ai-engine-architecture.json",
+  "theme": "dark",
+  "grid": "graph",
+  "fontFamily": "handwritten",
+  "layout": "manual",
+  "nodes": [
+    {
+      "id": "node-user",
+      "type": "actor",
+      "x": 248,
+      "y": 369,
+      "width": 120,
+      "height": 100,
+      "title": "User",
+      "text": "Developer / Pair Programmer",
+      "color": "blue",
+      "status": "completed",
+      "fontFamily": "handwritten"
+    },
+    {
+      "id": "node-ide",
+      "type": "card",
+      "x": 124,
+      "y": -122,
+      "width": 220,
+      "height": 130,
+      "title": "Antigravity IDE",
+      "text": "VS Code Host Environment\nActive Workspace Context",
+      "color": "purple",
+      "status": "active",
+      "fontFamily": "handwritten"
+    },
+    {
+      "id": "node-sync",
+      "type": "decision",
+      "x": 641,
+      "y": -262,
+      "width": 180,
+      "height": 150,
+      "title": "LiveSync Engine",
+      "text": "Watch **/.aidraw/*.json\nLocal Multi-File Dispatch",
+      "color": "amber",
+      "status": "active",
+      "fontFamily": "handwritten"
+    },
+    {
+      "id": "node-storage",
+      "type": "database",
+      "x": 840,
+      "y": 170,
+      "width": 200,
+      "height": 140,
+      "title": "Local Storage",
+      "text": "<project>/.aidraw/\n• plan.json\n• custom-plans.json",
+      "color": "green",
+      "status": "completed",
+      "fontFamily": "handwritten"
+    },
+    {
+      "id": "node-canvas",
+      "type": "cloud",
+      "x": 562,
+      "y": 597,
+      "width": 220,
+      "height": 140,
+      "title": "Live Canvas UI",
+      "text": "Rough Sketch Renderer\nInstant 2-Click Delete & Inline Create",
+      "color": "rose",
+      "status": "completed",
+      "fontFamily": "handwritten"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "from": "node-user",
+      "to": "node-ide",
+      "label": "Interacts",
+      "style": "solid",
+      "routing": "curved"
+    },
+    {
+      "id": "edge-2",
+      "from": "node-ide",
+      "to": "node-sync",
+      "label": "IPC Events",
+      "style": "solid",
+      "routing": "elbow"
+    },
+    {
+      "id": "edge-3",
+      "from": "node-sync",
+      "to": "node-storage",
+      "label": "Read/Write JSON",
+      "style": "solid",
+      "routing": "straight"
+    },
+    {
+      "id": "edge-4",
+      "from": "node-sync",
+      "to": "node-canvas",
+      "label": "Push Live Render",
+      "style": "dashed",
+      "routing": "curved"
+    }
+  ],
+  "updatedAt": "2026-09-06T14:41:23.200Z"
+}
