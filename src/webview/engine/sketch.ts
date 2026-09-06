@@ -368,6 +368,307 @@ export class SketchRenderer {
     this.drawEllipse(cx, cy, r, r, opts);
   }
 
+  // Draw generic polygon
+  drawPolygon(
+    points: { x: number; y: number }[],
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    if (points.length < 3) return;
+    const ctx = this.ctx;
+
+    if (fillColor && fillColor !== "transparent") {
+      ctx.save();
+      ctx.fillStyle = fillColor;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    const n = points.length;
+    for (let i = 0; i < n; i++) {
+      const p1 = points[i];
+      const p2 = points[(i + 1) % n];
+      this.drawLine(p1.x, p1.y, p2.x, p2.y, opts);
+    }
+  }
+
+  // Draw Hexagon (Microservice / Component)
+  drawHexagon(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const pts = [
+      { x: x + w * 0.22, y: y },
+      { x: x + w * 0.78, y: y },
+      { x: x + w, y: y + h * 0.5 },
+      { x: x + w * 0.78, y: y + h },
+      { x: x + w * 0.22, y: y + h },
+      { x: x, y: y + h * 0.5 },
+    ];
+    this.drawPolygon(pts, fillColor, opts);
+  }
+
+  // Draw Triangle (Alert / Filter / Gateway)
+  drawTriangle(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const pts = [
+      { x: x + w * 0.5, y: y },
+      { x: x + w, y: y + h },
+      { x: x, y: y + h },
+    ];
+    this.drawPolygon(pts, fillColor, opts);
+  }
+
+  // Draw Parallelogram (Input / Output / Transform)
+  drawParallelogram(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const offset = w * 0.18;
+    const pts = [
+      { x: x + offset, y: y },
+      { x: x + w, y: y },
+      { x: x + w - offset, y: y + h },
+      { x: x, y: y + h },
+    ];
+    this.drawPolygon(pts, fillColor, opts);
+  }
+
+  // Draw Trapezoid (Manual Step / Processing block)
+  drawTrapezoid(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const offset = w * 0.15;
+    const pts = [
+      { x: x + offset, y: y },
+      { x: x + w - offset, y: y },
+      { x: x + w, y: y + h },
+      { x: x, y: y + h },
+    ];
+    this.drawPolygon(pts, fillColor, opts);
+  }
+
+  // Draw Server Rack (Backend / Cluster with LED indicators)
+  drawServer(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    this.drawRect(x, y, w, h, fillColor, opts);
+    const ctx = this.ctx;
+
+    // Shelves / server bays
+    const bays = 3;
+    for (let i = 1; i < bays; i++) {
+      const sy = y + (h / bays) * i;
+      this.drawLine(x, sy, x + w, sy, { ...opts, roughness: 0.5 });
+    }
+
+    // LED status lights
+    ctx.save();
+    for (let i = 0; i < bays; i++) {
+      const ly = y + (h / bays) * (i + 0.5);
+      // Green LED
+      ctx.fillStyle = "#22c55e";
+      ctx.beginPath();
+      ctx.arc(x + 12, ly, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Blue/Amber LED
+      ctx.fillStyle = i === 1 ? "#38bdf8" : "#f59e0b";
+      ctx.beginPath();
+      ctx.arc(x + 20, ly, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Draw Browser Window (Frontend UI Mockup)
+  drawBrowser(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    this.drawRect(x, y, w, h, fillColor, opts);
+    const headerHeight = 24;
+    this.drawLine(x, y + headerHeight, x + w, y + headerHeight, { ...opts, roughness: 0.5 });
+
+    // 3 Traffic lights
+    const ctx = this.ctx;
+    ctx.save();
+    const dots = ["#ef4444", "#f59e0b", "#22c55e"];
+    dots.forEach((col, i) => {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(x + 12 + i * 10, y + headerHeight * 0.5, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // Address bar sketch
+    this.drawLine(x + 48, y + headerHeight * 0.5, x + w - 14, y + headerHeight * 0.5, {
+      ...opts,
+      roughness: 0.3,
+      strokeWidth: 1,
+    });
+  }
+
+  // Draw Mobile Device (Smartphone screen)
+  drawMobile(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    this.drawCapsule(x, y, w, h, fillColor, opts);
+    // Camera notch
+    this.drawLine(x + w * 0.5 - 12, y + 8, x + w * 0.5 + 12, y + 8, { ...opts, strokeWidth: 2, roughness: 0.3 });
+    // Home bar
+    this.drawLine(x + w * 0.5 - 18, y + h - 10, x + w * 0.5 + 18, y + h - 10, { ...opts, strokeWidth: 2, roughness: 0.3 });
+  }
+
+  // Draw Folder (Code module / Package)
+  drawFolder(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const tabW = w * 0.38;
+    const tabH = 12;
+    // Tab
+    this.drawLine(x, y + tabH, x, y, opts);
+    this.drawLine(x, y, x + tabW, y, opts);
+    this.drawLine(x + tabW, y, x + tabW + 8, y + tabH, opts);
+    // Main Body
+    this.drawRect(x, y + tabH, w, h - tabH, fillColor, opts);
+  }
+
+  // Draw Shield (Security / Firewall / Auth)
+  drawShield(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const ctx = this.ctx;
+    const mx = x + w * 0.5;
+
+    if (fillColor && fillColor !== "transparent") {
+      ctx.save();
+      ctx.fillStyle = fillColor;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 8);
+      ctx.lineTo(mx, y);
+      ctx.lineTo(x + w, y + 8);
+      ctx.quadraticCurveTo(x + w, y + h * 0.65, mx, y + h);
+      ctx.quadraticCurveTo(x, y + h * 0.65, x, y + 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    this.drawLine(x, y + 8, mx, y, opts);
+    this.drawLine(mx, y, x + w, y + 8, opts);
+    this.drawJitterCurve(x + w, y + 8, x + w, y + h * 0.65, mx, y + h, opts);
+    this.drawJitterCurve(x, y + 8, x, y + h * 0.65, mx, y + h, opts);
+  }
+
+  // Draw Custom Freeform SVG Path (Arbitrary Vector Graphics from AI)
+  drawCustomSvgPath(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    svgPath: string,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    const ctx = this.ctx;
+    try {
+      const path2d = new Path2D(svgPath);
+      ctx.save();
+      ctx.translate(x, y);
+
+      if (fillColor && fillColor !== "transparent") {
+        ctx.fillStyle = fillColor;
+        ctx.fill(path2d);
+      }
+
+      ctx.strokeStyle = opts.strokeColor || "#e4e4e7";
+      ctx.lineWidth = opts.strokeWidth || 1.8;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      if (opts.dash && opts.dash.length > 0) {
+        ctx.setLineDash(opts.dash);
+      }
+      ctx.stroke(path2d);
+
+      ctx.restore();
+    } catch (e) {
+      console.warn("Failed to render custom SVG path:", e);
+      this.drawRect(x, y, w, h, fillColor, opts);
+    }
+  }
+
+  private drawJitterCurve(
+    x1: number,
+    y1: number,
+    cx: number,
+    cy: number,
+    x2: number,
+    y2: number,
+    opts: StrokeOptions = {}
+  ) {
+    const steps = 12;
+    let px = x1;
+    let py = y1;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const nx = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2;
+      const ny = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2;
+      this.drawLine(px, py, nx, ny, opts);
+      px = nx;
+      py = ny;
+    }
+  }
+
   // Hand-drawn ellipse
   drawEllipse(
     cx: number,

@@ -9,7 +9,19 @@ export type NodeType =
   | "capsule"
   | "queue"
   | "actor"
-  | "text";
+  | "text"
+  | "hexagon"
+  | "triangle"
+  | "parallelogram"
+  | "trapezoid"
+  | "server"
+  | "browser"
+  | "mobile"
+  | "folder"
+  | "shield"
+  | "component"
+  | "custom"
+  | string;
 
 export type NodeStatus = "todo" | "active" | "completed" | "warning" | "error" | "none";
 export type ArrowRouting = "straight" | "curved" | "elbow";
@@ -24,10 +36,17 @@ export interface CanvasNode {
   height: number;
   title: string;
   text?: string;
-  color?: string; // "default", "blue", "green", "amber", "purple", "rose", "yellow"
+  color?: string; // "default", "blue", "green", "amber", "purple", "rose", "yellow", or custom hex/rgb
   status?: NodeStatus;
   badge?: string;
   fontFamily?: FontFamily;
+  icon?: string; // custom emoji or icon symbol, e.g. "🚀", "⚡", "🔒", "🐳"
+  svgPath?: string; // custom freeform SVG path d="..."
+  points?: { x: number; y: number }[] | [number, number][]; // custom polygon points
+  strokeWidth?: number;
+  strokeStyle?: "solid" | "dashed" | "dotted";
+  customFill?: string;
+  customStroke?: string;
 }
 
 export interface CanvasEdge {

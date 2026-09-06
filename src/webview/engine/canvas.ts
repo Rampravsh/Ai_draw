@@ -591,116 +591,249 @@ export class LiveCanvas {
   private drawNode(node: CanvasNode, isDark: boolean, defaultStroke: string) {
     const colors = this.resolveColor(node.color || "default", isDark);
     const font = node.fontFamily || this.defaultFont;
+    const fillColor = node.customFill || colors.fill;
+    const strokeColor = node.customStroke || colors.border;
+    const strokeWidth = node.strokeWidth || (node.status === "active" ? 2.5 : 1.8);
+    const dash =
+      node.strokeStyle === "dashed"
+        ? [6, 4]
+        : node.strokeStyle === "dotted"
+        ? [2, 3]
+        : [];
+    const strokeOpts = {
+      strokeColor,
+      strokeWidth,
+      roughness: 0.85,
+      dash,
+    };
 
-    switch (node.type) {
-      case "sticky":
-        this.renderer.drawStickyNote(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.6, roughness: 0.85 }
-        );
-        break;
+    // Check 1: Custom Freeform SVG Path from AI
+    if (node.svgPath) {
+      this.renderer.drawCustomSvgPath(
+        node.x,
+        node.y,
+        node.width,
+        node.height,
+        node.svgPath,
+        fillColor,
+        strokeOpts
+      );
+    }
+    // Check 2: Custom Polygon from AI
+    else if (node.points && Array.isArray(node.points) && node.points.length >= 3) {
+      const pts = (node.points as any[]).map((p: any) => {
+        if (Array.isArray(p)) return { x: node.x + p[0], y: node.y + p[1] };
+        return { x: node.x + p.x, y: node.y + p.y };
+      });
+      this.renderer.drawPolygon(pts, fillColor, strokeOpts);
+    }
+    // Check 3: Standard & Extended Architecture Shapes
+    else {
+      switch (node.type) {
+        case "sticky":
+          this.renderer.drawStickyNote(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            { ...strokeOpts, strokeWidth: 1.6 }
+          );
+          break;
 
-      case "decision":
-        this.renderer.drawDiamond(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "decision":
+          this.renderer.drawDiamond(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "database":
-        this.renderer.drawCylinder(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "database":
+          this.renderer.drawCylinder(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "cloud":
-        this.renderer.drawCloud(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "cloud":
+          this.renderer.drawCloud(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "circle":
-        this.renderer.drawCircle(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "circle":
+          this.renderer.drawCircle(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "capsule":
-        this.renderer.drawCapsule(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "capsule":
+          this.renderer.drawCapsule(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "queue":
-        this.renderer.drawQueue(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "queue":
+          this.renderer.drawQueue(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "actor":
-        this.renderer.drawActor(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          { strokeColor: colors.border, strokeWidth: 1.8, roughness: 0.85 }
-        );
-        break;
+        case "actor":
+          this.renderer.drawActor(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-      case "card":
-      case "step":
-      default:
-        this.renderer.drawRect(
-          node.x,
-          node.y,
-          node.width,
-          node.height,
-          colors.fill,
-          {
-            strokeColor: colors.border,
-            strokeWidth: node.status === "active" ? 2.5 : 1.8,
-            roughness: 0.85,
-          }
-        );
+        case "hexagon":
+          this.renderer.drawHexagon(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
 
-        if (node.status && node.status !== "none") {
-          this.drawStatusBadge(node, isDark, font);
-        }
-        break;
+        case "triangle":
+          this.renderer.drawTriangle(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "parallelogram":
+          this.renderer.drawParallelogram(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "trapezoid":
+          this.renderer.drawTrapezoid(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "server":
+          this.renderer.drawServer(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "browser":
+          this.renderer.drawBrowser(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "mobile":
+          this.renderer.drawMobile(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "folder":
+          this.renderer.drawFolder(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "shield":
+          this.renderer.drawShield(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "card":
+        case "step":
+        default:
+          this.renderer.drawRect(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+      }
+    }
+
+    if (node.status && node.status !== "none") {
+      this.drawStatusBadge(node, isDark, font);
     }
 
     this.drawNodeContent(node, colors.text, font);
@@ -758,15 +891,37 @@ export class LiveCanvas {
   private drawNodeContent(node: CanvasNode, textColor: string, font: FontFamily) {
     const isSticky = node.type === "sticky";
     const paddingX = 14;
-    let currentY = node.y + (isSticky ? 14 : 12);
+    let currentY =
+      node.y +
+      (isSticky
+        ? 14
+        : node.type === "browser"
+        ? 34
+        : node.type === "folder"
+        ? 22
+        : node.type === "shield"
+        ? 22
+        : 12);
     const maxW = Math.max(20, node.width - paddingX * 2);
+
+    const hasIcon = Boolean(node.icon);
+    const iconWidth = hasIcon ? 28 : 0;
+
+    if (hasIcon) {
+      this.ctx.save();
+      this.ctx.font = "20px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif";
+      this.ctx.textAlign = "left";
+      this.ctx.textBaseline = "top";
+      this.ctx.fillText(node.icon!, node.x + paddingX, currentY);
+      this.ctx.restore();
+    }
 
     if (node.title) {
       currentY = this.renderer.drawText(
         node.title,
-        node.x + paddingX,
+        node.x + paddingX + iconWidth,
         currentY,
-        maxW - (node.status ? 55 : 0),
+        maxW - (node.status && node.status !== "none" ? 55 : 0) - iconWidth,
         19,
         17,
         textColor,
@@ -774,6 +929,8 @@ export class LiveCanvas {
         font
       );
       currentY += 4;
+    } else if (hasIcon) {
+      currentY += 26;
     }
 
     if (node.text) {
@@ -795,6 +952,19 @@ export class LiveCanvas {
     colorName: string,
     isDark: boolean
   ): { fill: string; border: string; text: string } {
+    if (
+      colorName &&
+      (colorName.startsWith("#") ||
+        colorName.startsWith("rgb") ||
+        colorName.startsWith("hsl"))
+    ) {
+      return {
+        fill: isDark ? "#18181b" : "#ffffff",
+        border: colorName,
+        text: isDark ? "#f4f4f5" : "#18181b",
+      };
+    }
+
     const palette: Record<
       string,
       { dark: { fill: string; border: string; text: string }; light: { fill: string; border: string; text: string } }
@@ -1212,6 +1382,69 @@ export class LiveCanvas {
         title = "User";
         text = "";
         color = "default";
+        break;
+      case "hexagon":
+        width = 160;
+        height = 100;
+        title = "Microservice";
+        text = "";
+        color = "blue";
+        break;
+      case "triangle":
+        width = 130;
+        height = 110;
+        title = "Warning / Delta";
+        text = "";
+        color = "amber";
+        break;
+      case "parallelogram":
+        width = 170;
+        height = 80;
+        title = "Input / Output";
+        text = "";
+        color = "blue";
+        break;
+      case "trapezoid":
+        width = 170;
+        height = 80;
+        title = "Manual Operation";
+        text = "";
+        color = "purple";
+        break;
+      case "server":
+        width = 180;
+        height = 130;
+        title = "App Server";
+        text = "Cluster Node";
+        color = "blue";
+        break;
+      case "browser":
+        width = 240;
+        height = 160;
+        title = "Web Client";
+        text = "React Frontend";
+        color = "purple";
+        break;
+      case "mobile":
+        width = 130;
+        height = 190;
+        title = "Mobile App";
+        text = "iOS / Android";
+        color = "rose";
+        break;
+      case "folder":
+        width = 170;
+        height = 110;
+        title = "Module / Package";
+        text = "";
+        color = "amber";
+        break;
+      case "shield":
+        width = 140;
+        height = 150;
+        title = "Auth / Firewall";
+        text = "Security Gateway";
+        color = "green";
         break;
       case "text":
         width = 200;
