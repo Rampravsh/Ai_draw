@@ -1,109 +1,24 @@
 {
-  "title": "How to Create a New Workspace in IDE",
+  "title": "Project Architecture & Live Plan",
   "filename": "plan.json",
   "theme": "dark",
   "grid": "graph",
   "fontFamily": "handwritten",
-  "layout": "manual",
+  "layout": "auto",
   "nodes": [
     {
-      "id": "node-zybx9k",
-      "type": "database",
-      "x": 187,
-      "y": 410,
-      "width": 70,
-      "height": 274,
-      "title": "",
-      "text": "",
+      "id": "step-1",
+      "type": "card",
+      "x": 100,
+      "y": 160,
+      "width": 220,
+      "height": 100,
+      "title": "1. Getting Started",
+      "text": "Visual whiteboard live in IDE",
       "color": "blue",
-      "status": "none"
-    },
-    {
-      "id": "node-6wdejt",
-      "type": "database",
-      "x": 123,
-      "y": 378,
-      "width": 204,
-      "height": 62,
-      "title": "",
-      "text": "",
-      "color": "blue",
-      "status": "none"
-    },
-    {
-      "id": "node-rptahv",
-      "type": "capsule",
-      "x": 47,
-      "y": 237,
-      "width": 353,
-      "height": 157,
-      "title": "",
-      "text": "",
-      "color": "green",
-      "status": "none"
-    },
-    {
-      "id": "node-27nopo",
-      "type": "actor",
-      "x": 126,
-      "y": 265,
-      "width": 90,
-      "height": 130,
-      "title": "",
-      "text": "",
-      "color": "default",
-      "status": "none"
-    },
-    {
-      "id": "node-x1qkkb",
-      "type": "cloud",
-      "x": 55,
-      "y": 108,
-      "width": 70,
-      "height": 62,
-      "title": "",
-      "text": "",
-      "color": "default",
-      "status": "none"
-    },
-    {
-      "id": "node-816ijl",
-      "type": "circle",
-      "x": 321,
-      "y": 106,
-      "width": 70,
-      "height": 90,
-      "title": "State",
-      "text": "",
-      "color": "default",
-      "status": "none"
+      "status": "completed"
     }
   ],
-  "edges": [
-    {
-      "from": "node-x1qkkb",
-      "to": "node-816ijl",
-      "style": "animated",
-      "routing": "straight"
-    },
-    {
-      "from": "node-x1qkkb",
-      "to": "node-816ijl",
-      "style": "animated",
-      "routing": "straight"
-    },
-    {
-      "from": "node-x1qkkb",
-      "to": "node-816ijl",
-      "style": "animated",
-      "routing": "straight"
-    },
-    {
-      "from": "node-x1qkkb",
-      "to": "node-816ijl",
-      "style": "animated",
-      "routing": "straight"
-    }
-  ],
-  "updatedAt": "2026-09-04T19:15:00.000Z"
+  "edges": [],
+  "updatedAt": "2026-09-06T13:55:00.410Z"
 }

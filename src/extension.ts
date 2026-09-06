@@ -21,10 +21,22 @@ export function activate(context: vscode.ExtensionContext) {
     100
   );
   statusBarItem.command = "aiDraw.openCanvas";
-  statusBarItem.text = "$(paintcan) AI Live Draw";
-  statusBarItem.tooltip = "Open AI Live Visual Canvas (Graph Whiteboard)";
+  updateStatusBar();
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
+
+  // Helper to post full diagram & workspace state to webview
+  function postFullState(panel: vscode.WebviewPanel) {
+    if (!liveSyncService) return;
+    panel.webview.postMessage({
+      type: "diagramListUpdate",
+      diagrams: liveSyncService.listDiagramFiles(),
+      diagramDetails: liveSyncService.listDiagramDetails(),
+      activeDiagram: liveSyncService.activeFilename,
+      workspaces: liveSyncService.getAvailableWorkspaces(),
+      activeWorkspace: liveSyncService.getActiveWorkspaceInfo(),
+    });
+  }
 
   // When active plan changes, push live update to Webview
   liveSyncService.setOnPlanUpdated((plan: CanvasPlan) => {
@@ -33,23 +45,40 @@ export function activate(context: vscode.ExtensionContext) {
         type: "syncPlan",
         plan,
       });
-      currentPanel.webview.postMessage({
-        type: "diagramListUpdate",
-        diagrams: liveSyncService?.listDiagramFiles(),
-        activeDiagram: liveSyncService?.activeFilename,
-      });
+      postFullState(currentPanel);
     }
+    updateStatusBar();
   });
 
-  liveSyncService.setOnDiagramListChanged((files: string[]) => {
+  liveSyncService.setOnDiagramListChanged(() => {
     if (currentPanel) {
-      currentPanel.webview.postMessage({
-        type: "diagramListUpdate",
-        diagrams: files,
-        activeDiagram: liveSyncService?.activeFilename,
-      });
+      postFullState(currentPanel);
     }
+    updateStatusBar();
   });
+
+  // Track active editor: if user opens a diagram file or file in another project, sync workspace
+  vscode.window.onDidChangeActiveTextEditor(
+    (editor) => {
+      if (!editor || !liveSyncService) return;
+      const docPath = editor.document.uri.fsPath;
+      if (docPath.includes(".aidraw")) {
+        const parentDir = path.dirname(docPath);
+        const wsDir = path.dirname(parentDir);
+        const filename = path.basename(docPath);
+        if (wsDir !== liveSyncService.activeWorkspacePath && fs.existsSync(docPath)) {
+          liveSyncService.setActiveWorkspace(wsDir, filename);
+          if (currentPanel) {
+            postFullState(currentPanel);
+          }
+        } else if (filename !== liveSyncService.activeFilename && fs.existsSync(docPath)) {
+          liveSyncService.setActiveFilename(filename);
+        }
+      }
+    },
+    null,
+    context.subscriptions
+  );
 
   // Command: Open Live Canvas
   const openCanvasCmd = vscode.commands.registerCommand(
@@ -59,13 +88,13 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Command: Initialize New Plan
+  // Command: Initialize New Plan (user can just type title without .json)
   const newPlanCmd = vscode.commands.registerCommand(
     "aiDraw.newDiagram",
     async () => {
       const title = await vscode.window.showInputBox({
-        prompt: "Enter a title for the new visual plan",
-        placeHolder: "e.g. Microservices Architecture",
+        prompt: "Enter title for new plan (e.g. Backend Architecture)",
+        placeHolder: "Microservices Design",
       });
       if (title && liveSyncService) {
         liveSyncService.createNewDiagram(title);
@@ -112,6 +141,14 @@ export function activate(context: vscode.ExtensionContext) {
     toggleSyncCmd,
     setupSkillCmd
   );
+}
+
+function updateStatusBar() {
+  if (!statusBarItem) return;
+  const wsName = liveSyncService?.activeWorkspaceName || "Workspace";
+  const fileName = liveSyncService?.activeFilename || "plan.json";
+  statusBarItem.text = `$(paintcan) AI Draw: ${wsName} / ${fileName}`;
+  statusBarItem.tooltip = `AI Live Draw | Active: ${wsName} -> ${fileName}`;
 }
 
 // Automatically configures the AI Live Draw skill so ANY user's AI assistant immediately detects and uses it
@@ -187,6 +224,18 @@ function openLiveCanvasPanel(context: vscode.ExtensionContext) {
 
   currentPanel.webview.html = getWebviewHtml(currentPanel.webview, context);
 
+  function postFullState() {
+    if (!currentPanel || !liveSyncService) return;
+    currentPanel.webview.postMessage({
+      type: "diagramListUpdate",
+      diagrams: liveSyncService.listDiagramFiles(),
+      diagramDetails: liveSyncService.listDiagramDetails(),
+      activeDiagram: liveSyncService.activeFilename,
+      workspaces: liveSyncService.getAvailableWorkspaces(),
+      activeWorkspace: liveSyncService.getActiveWorkspaceInfo(),
+    });
+  }
+
   currentPanel.webview.onDidReceiveMessage(
     (msg: WebviewToHostMessage) => {
       switch (msg.type) {
@@ -197,22 +246,12 @@ function openLiveCanvasPanel(context: vscode.ExtensionContext) {
               type: "syncPlan",
               plan,
             });
-            currentPanel.webview.postMessage({
-              type: "diagramListUpdate",
-              diagrams: liveSyncService?.listDiagramFiles(),
-              activeDiagram: liveSyncService?.activeFilename,
-            });
+            postFullState();
           }
           break;
         }
         case "listDiagrams": {
-          if (currentPanel && liveSyncService) {
-            currentPanel.webview.postMessage({
-              type: "diagramListUpdate",
-              diagrams: liveSyncService.listDiagramFiles(),
-              activeDiagram: liveSyncService.activeFilename,
-            });
-          }
+          postFullState();
           break;
         }
         case "switchDiagram": {
@@ -221,10 +260,36 @@ function openLiveCanvasPanel(context: vscode.ExtensionContext) {
           }
           break;
         }
+        case "switchWorkspace": {
+          if (msg.workspacePath && liveSyncService) {
+            liveSyncService.setActiveWorkspace(msg.workspacePath);
+            postFullState();
+            vscode.window.showInformationMessage(`AI Live Draw switched to workspace: ${path.basename(msg.workspacePath)}`);
+          }
+          break;
+        }
+        case "browseWorkspace": {
+          vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: "Select Project / Workspace Folder",
+          }).then((folders) => {
+            if (folders && folders.length > 0 && liveSyncService && currentPanel) {
+              const selectedPath = folders[0].fsPath;
+              liveSyncService.setActiveWorkspace(selectedPath);
+              postFullState();
+              vscode.window.showInformationMessage(`AI Live Draw loaded workspace: ${path.basename(selectedPath)}`);
+            }
+          });
+          break;
+        }
         case "deleteDiagram": {
           if (msg.filename && liveSyncService) {
-            liveSyncService.deleteDiagram(msg.filename);
-            vscode.window.showInformationMessage(`Deleted diagram: ${msg.filename}`);
+            const deleted = liveSyncService.deleteDiagram(msg.filename);
+            if (deleted) {
+              vscode.window.showInformationMessage(`Deleted diagram: ${msg.filename}`);
+            }
           }
           break;
         }
@@ -236,6 +301,7 @@ function openLiveCanvasPanel(context: vscode.ExtensionContext) {
                 type: "syncPlan",
                 plan,
               });
+              postFullState();
             }
           }
           break;

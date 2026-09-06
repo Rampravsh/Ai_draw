@@ -5,98 +5,116 @@ description: Live-draws architecture diagrams, flowcharts, plans, and step-by-st
 
 # AI Live Draw Workflow
 
-Use this skill whenever you are discussing a plan, explaining system architecture, breaking down tasks, or working on complex workflows with the user.
+Use this skill whenever the user asks to draw, visualize, plan, or explain system architecture, flowcharts, task roadmaps, or workflows.
 
-## Purpose
-The user has the **AI Live Draw** extension open in their IDE (in a side editor column beside the chat). Whenever you update `.aidraw/plan.json`, the canvas immediately reflects your changes live on a minimalist hand-drawn graph paper canvas with animated connectors!
+## Critical Instructions (Zero Scanning & Zero Overhead)
+- **Do NOT scan or search external directories** (never search for extension source code).
+- The **AI Live Draw** extension is already installed in the IDE.
+- In **ANY project or workspace**, to draw or update the canvas, simply write or update `.aidraw/plan.json` in the **CURRENT active workspace**.
+- The extension's background file watcher will immediately detect `.aidraw/plan.json` and render it live on the whiteboard canvas beside the chat!
 
-## How to Live-Draw
+## Standard Drawing Format (`.aidraw/plan.json`)
 
-### Option 1: Direct JSON Update (Recommended for batch diagrams)
-Write or modify `.aidraw/plan.json` directly. The file schema:
+Write directly to `.aidraw/plan.json`:
 
 ```json
 {
-  "title": "Authentication Architecture & Flow",
+  "title": "System Architecture / Plan Title",
+  "filename": "plan.json",
   "theme": "dark",
   "grid": "graph",
+  "fontFamily": "handwritten",
   "layout": "auto",
   "nodes": [
     {
       "id": "step-1",
       "type": "card",
-      "width": 220,
-      "height": 100,
-      "title": "1. User Login Request",
-      "text": "POST /api/auth/login with credentials",
+      "width": 230,
+      "height": 110,
+      "title": "1. User / Client Layer",
+      "text": "Frontend interface & user requests",
       "color": "blue",
-      "status": "completed"
+      "status": "completed",
+      "badge": "STEP 1"
+    },
+    {
+      "id": "decision-1",
+      "type": "decision",
+      "width": 170,
+      "height": 120,
+      "title": "Authenticated?",
+      "text": "Validate token or session",
+      "color": "amber"
     },
     {
       "id": "step-2",
       "type": "card",
-      "width": 220,
-      "height": 100,
-      "title": "2. Verify Password Hash",
-      "text": "bcrypt.compare against Postgres DB",
+      "width": 230,
+      "height": 110,
+      "title": "2. Backend Service",
+      "text": "Processes business logic & calls DB",
       "color": "green",
-      "status": "active"
+      "status": "active",
+      "badge": "ACTIVE"
     },
     {
       "id": "db-1",
       "type": "database",
-      "width": 160,
-      "height": 110,
-      "title": "Postgres DB",
-      "text": "Users table",
+      "width": 180,
+      "height": 120,
+      "title": "Database Storage",
+      "text": "PostgreSQL / MongoDB store",
       "color": "purple"
+    },
+    {
+      "id": "note-1",
+      "type": "sticky",
+      "width": 200,
+      "height": 140,
+      "title": "💡 Important Note",
+      "text": "• Sub-50ms latency\n• Automatic real-time live sync",
+      "color": "yellow"
     }
   ],
   "edges": [
     {
       "from": "step-1",
+      "to": "decision-1",
+      "label": "HTTPS Request",
+      "style": "animated"
+    },
+    {
+      "from": "decision-1",
       "to": "step-2",
-      "label": "payload",
+      "label": "Valid",
       "style": "animated"
     },
     {
       "from": "step-2",
       "to": "db-1",
-      "label": "SELECT user",
-      "style": "solid"
+      "label": "Query / Mutation",
+      "style": "animated",
+      "routing": "elbow"
     }
-  ]
+  ],
+  "updatedAt": "2026-09-06T12:00:00.000Z"
 }
 ```
 
-### Option 2: CLI Commands
-Run commands in terminal:
-```bash
-# Add a new step
-node .aidraw/draw.js add-step --id step-3 --title "3. Issue JWT Token" --text "Sign access & refresh tokens" --color amber --status todo
-
-# Connect steps with animated data flow
-node .aidraw/draw.js connect step-2 step-3 --label "on success" --style animated
-
-# Mark an active step completed
-node .aidraw/draw.js set-status step-2 completed
-node .aidraw/draw.js set-status step-3 active
-
-# Add a sticky note tip
-node .aidraw/draw.js add-sticky --title "Note" --text "Use 15m expiration for access tokens"
-```
-
 ## Node Types
-- `card`: Standard step or component (colors: `blue`, `green`, `amber`, `purple`, `rose`, `default`).
-- `decision`: Diamond branching node (e.g. "Is Token Valid?").
-- `database`: Database cylinder for DB, cache, or storage.
-- `sticky`: Post-it style sticky note with folded corner.
+- `card`: Process step or service box (colors: `blue`, `green`, `amber`, `purple`, `rose`, `default`).
+- `decision`: Diamond branching node.
+- `database`: Database cylinder for storage, Redis, or DB.
+- `cloud`: Cloud cluster / Kubernetes / external network.
+- `circle`: State node or round status indicator.
+- `capsule`: Pill shape for API endpoints or events.
+- `queue`: Message queue / task buffer (RabbitMQ / BullMQ / Kafka).
+- `actor`: User / client stick figure.
+- `sticky`: Post-it note with folded corner for tips or annotations.
 
 ## Status Markers
-- `todo`: Gray neutral badge
-- `active`: Highlighted blue badge + thicker stroke (currently in progress)
-- `completed`: Green check badge (finished)
-- `warning`: Amber alert badge
-- `error`: Red error badge
+- `todo`, `active`, `completed`, `warning`, `error`
 
-Always maintain `.aidraw/plan.json` during the conversation so the user can visually follow along with zero mental friction!
+## Arrow Styles & Routing
+- `style`: `"animated"` (moving pulse dots), `"solid"`, `"dashed"`
+- `routing`: `"straight"` (direct), `"elbow"` (90° corner bend), `"curved"` (bezier arc)

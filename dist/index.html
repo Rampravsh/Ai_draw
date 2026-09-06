@@ -28,6 +28,38 @@
         <span class="brand-title">AI Draw</span>
       </div>
 
+      <!-- Quick Workspace & Diagram Dropdown Selector -->
+      <div class="workspace-file-selector" id="workspace-file-selector">
+        <button class="selector-btn" id="btn-file-selector" title="Switch Diagram or Project Workspace">
+          <span class="ws-badge" id="header-ws-badge">📁 Workspace</span>
+          <span class="file-badge" id="header-file-badge">📄 plan.json</span>
+          <span class="selector-chevron">▾</span>
+        </button>
+
+        <!-- Dropdown Menu (Floating) -->
+        <div class="selector-dropdown" id="selector-dropdown">
+          <!-- Workspaces Section -->
+          <div class="dropdown-section-header">
+            <span>WORKSPACES</span>
+            <button class="dropdown-action-btn" id="btn-browse-folder" title="Open any folder on your computer as workspace">+ Browse Folder</button>
+          </div>
+          <div class="dropdown-list" id="dropdown-workspaces-list">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <!-- Diagrams Section -->
+          <div class="dropdown-section-header">
+            <span>DIAGRAMS</span>
+            <button class="dropdown-action-btn" id="btn-quick-new-diagram" title="Create a new diagram in this workspace">+ New Plan</button>
+          </div>
+          <div class="dropdown-list" id="dropdown-diagrams-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
       <div class="toolbar-divider"></div>
 
       <!-- Quick Canvas Tools -->
@@ -205,12 +237,19 @@
         <div class="tab-pane" id="tab-files">
           <div class="pane-header-row">
             <div class="pane-title">Diagram Files</div>
-            <button class="action-btn" id="btn-new-file">+ New</button>
+            <button class="action-btn" id="btn-new-file" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">+ New Plan</button>
+          </div>
+          <div class="active-ws-banner">
+            <div class="ws-banner-info">
+              <span class="ws-banner-label">Active Project</span>
+              <span class="ws-banner-name" id="sidebar-ws-name">Workspace</span>
+            </div>
+            <button class="action-btn" id="btn-sidebar-switch-ws" title="Browse / Change project workspace">Switch</button>
           </div>
           <div id="diagrams-list" class="diagrams-list">
             <!-- Dynamically populated -->
           </div>
-          <div class="pane-hint">Files are stored independently in this project's .aidraw/</div>
+          <div class="pane-hint">Saved automatically in this workspace's .aidraw/ folder</div>
         </div>
       </aside>
     </div>

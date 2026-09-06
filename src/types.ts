@@ -56,6 +56,20 @@ export interface CanvasPlan {
   updatedAt?: string;
 }
 
+export interface DiagramFileInfo {
+  filename: string;
+  title: string;
+  nodeCount: number;
+  updatedAt?: string;
+}
+
+export interface WorkspaceInfo {
+  name: string;
+  path: string;
+  isCurrent: boolean;
+  diagramCount: number;
+}
+
 export interface WebviewToHostMessage {
   type:
     | "savePlan"
@@ -64,11 +78,14 @@ export interface WebviewToHostMessage {
     | "switchDiagram"
     | "newDiagram"
     | "deleteDiagram"
+    | "switchWorkspace"
+    | "browseWorkspace"
     | "logActivity"
     | "log";
   plan?: CanvasPlan;
   filename?: string;
   title?: string;
+  workspacePath?: string;
   activity?: {
     action: string;
     details: string;
@@ -88,5 +105,8 @@ export interface HostToWebviewMessage {
   theme?: ThemeMode;
   grid?: GridMode;
   diagrams?: string[];
+  diagramDetails?: DiagramFileInfo[];
   activeDiagram?: string;
+  workspaces?: WorkspaceInfo[];
+  activeWorkspace?: WorkspaceInfo;
 }

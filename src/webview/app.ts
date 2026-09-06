@@ -10,6 +10,8 @@ import {
   NodeType,
   FontFamily,
   NodeStatus,
+  DiagramFileInfo,
+  WorkspaceInfo,
 } from "../types";
 
 declare function acquireVsCodeApi(): {
@@ -29,10 +31,22 @@ class WebviewApp {
   private statusDot: HTMLElement;
   private statusText: HTMLElement;
 
+  // Top Bar Workspace & File Dropdown Elements
+  private workspaceFileSelector: HTMLElement;
+  private btnFileSelector: HTMLElement;
+  private headerWsBadge: HTMLElement;
+  private headerFileBadge: HTMLElement;
+  private dropdownWorkspacesList: HTMLElement;
+  private dropdownDiagramsList: HTMLElement;
+  private btnBrowseFolder: HTMLElement;
+  private btnQuickNewDiagram: HTMLElement;
+
   // Sidebar Elements
   private inspectorSidebar: HTMLElement;
   private colorSwatches: HTMLElement;
   private diagramsList: HTMLElement;
+  private sidebarWsName: HTMLElement;
+  private btnSidebarSwitchWs: HTMLElement;
 
   // Inline Direct Text Editor Elements
   private inlineEditorContainer: HTMLElement;
@@ -41,6 +55,10 @@ class WebviewApp {
 
   // State
   private activeDiagramName: string = "plan.json";
+  private activeWorkspaceName: string = "Workspace";
+  private activeWorkspacePath: string = "";
+  private diagramDetails: DiagramFileInfo[] = [];
+  private availableWorkspaces: WorkspaceInfo[] = [];
 
   constructor() {
     const canvasElement = document.getElementById("canvas") as HTMLCanvasElement;
@@ -49,10 +67,24 @@ class WebviewApp {
     this.statusDot = document.getElementById("status-dot")!;
     this.statusText = document.getElementById("status-text")!;
 
+    // Dropdown Elements
+    this.workspaceFileSelector = document.getElementById("workspace-file-selector")!;
+    this.btnFileSelector = document.getElementById("btn-file-selector")!;
+    this.headerWsBadge = document.getElementById("header-ws-badge")!;
+    this.headerFileBadge = document.getElementById("header-file-badge")!;
+    this.dropdownWorkspacesList = document.getElementById("dropdown-workspaces-list")!;
+    this.dropdownDiagramsList = document.getElementById("dropdown-diagrams-list")!;
+    this.btnBrowseFolder = document.getElementById("btn-browse-folder")!;
+    this.btnQuickNewDiagram = document.getElementById("btn-quick-new-diagram")!;
+
+    // Sidebar Elements
     this.inspectorSidebar = document.getElementById("inspector-sidebar")!;
     this.colorSwatches = document.getElementById("color-swatches")!;
     this.diagramsList = document.getElementById("diagrams-list")!;
+    this.sidebarWsName = document.getElementById("sidebar-ws-name")!;
+    this.btnSidebarSwitchWs = document.getElementById("btn-sidebar-switch-ws")!;
 
+    // Inline Editor
     this.inlineEditorContainer = document.getElementById("inline-text-editor-container")!;
     this.inlineEditorTextarea = document.getElementById("inline-text-editor") as HTMLTextAreaElement;
 
@@ -70,6 +102,7 @@ class WebviewApp {
     );
 
     this.setupToolbar();
+    this.setupWorkspaceDropdown();
     this.setupSidebar();
     this.setupInlineEditor();
     this.setupDragAndDrop();
@@ -123,9 +156,9 @@ class WebviewApp {
       this.updateZoomDisplay();
     });
 
-    // Font Toggle: applies to selected node OR board
-    const fontBtn = document.getElementById("btn-font-toggle");
-    fontBtn?.addEventListener("click", () => {
+    // Font Toggle
+    const fontToggleBtn = document.getElementById("btn-font-toggle");
+    fontToggleBtn?.addEventListener("click", () => {
       const nextFont: FontFamily =
         this.liveCanvas.defaultFont === "handwritten" ? "sans" : "handwritten";
       this.setFont(nextFont);
@@ -179,6 +212,48 @@ class WebviewApp {
     });
   }
 
+  private setupWorkspaceDropdown() {
+    this.btnFileSelector?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.workspaceFileSelector.classList.toggle("open");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!this.workspaceFileSelector.contains(e.target as Node)) {
+        this.closeDropdown();
+      }
+    });
+
+    this.btnBrowseFolder?.addEventListener("click", () => {
+      this.closeDropdown();
+      this.vscode.postMessage({ type: "browseWorkspace" });
+    });
+
+    this.btnQuickNewDiagram?.addEventListener("click", () => {
+      this.closeDropdown();
+      this.promptAndCreateNewDiagram();
+    });
+
+    this.btnSidebarSwitchWs?.addEventListener("click", () => {
+      this.vscode.postMessage({ type: "browseWorkspace" });
+    });
+  }
+
+  private closeDropdown() {
+    this.workspaceFileSelector.classList.remove("open");
+  }
+
+  private promptAndCreateNewDiagram() {
+    const title = prompt("Enter a name for the new plan (e.g. Backend Architecture, User Flow):", "");
+    if (title && title.trim().length > 0) {
+      this.vscode.postMessage({
+        type: "newDiagram",
+        title: title.trim(),
+      });
+      this.showTemporaryStatus("Creating plan...");
+    }
+  }
+
   private setupSidebar() {
     // Tabs
     const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
@@ -192,12 +267,15 @@ class WebviewApp {
           pane.classList.remove("active");
         });
         document.getElementById(`tab-${tabName}`)?.classList.add("active");
+
+        // If switching to files tab, refresh diagram list
+        if (tabName === "files") {
+          this.vscode.postMessage({ type: "listDiagrams" });
+        }
       });
     });
 
-    // Shape Palette Click:
-    // If a node is currently selected on canvas -> MORPH that node's shape!
-    // If NO node is selected -> create a new shape at center!
+    // Shape Palette Click
     document.querySelectorAll<HTMLButtonElement>("[data-shape]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const shapeType = btn.getAttribute("data-shape") as NodeType;
@@ -217,7 +295,7 @@ class WebviewApp {
       });
     });
 
-    // Color Swatches Click -> morph selected node color
+    // Color Swatches Click
     this.colorSwatches.querySelectorAll<HTMLButtonElement>(".swatch").forEach((swatch) => {
       swatch.addEventListener("click", () => {
         const color = swatch.getAttribute("data-color") || "default";
@@ -229,7 +307,7 @@ class WebviewApp {
       });
     });
 
-    // Status Buttons Click -> morph selected node status
+    // Status Buttons Click
     document.querySelectorAll<HTMLButtonElement>(".status-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const status = btn.getAttribute("data-status") as NodeStatus;
@@ -241,7 +319,7 @@ class WebviewApp {
       });
     });
 
-    // Font Buttons Click -> morph selected node font
+    // Font Buttons Click
     document.querySelectorAll<HTMLButtonElement>(".font-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const font = btn.getAttribute("data-font") as FontFamily;
@@ -254,7 +332,7 @@ class WebviewApp {
       });
     });
 
-    // Duplicate & Delete
+    // Duplicate & Delete Node
     document.getElementById("btn-duplicate-node")?.addEventListener("click", () => {
       this.liveCanvas.duplicateSelectedNode();
     });
@@ -264,15 +342,9 @@ class WebviewApp {
       this.showTemporaryStatus("Deleted (Ctrl+Z to Undo)");
     });
 
-    // New Diagram File
+    // New Diagram File from sidebar
     document.getElementById("btn-new-file")?.addEventListener("click", () => {
-      const title = prompt("Enter a name for the new diagram:", "New Architecture");
-      if (title && title.trim().length > 0) {
-        this.vscode.postMessage({
-          type: "newDiagram",
-          title: title.trim(),
-        });
-      }
+      this.promptAndCreateNewDiagram();
     });
   }
 
@@ -348,63 +420,68 @@ class WebviewApp {
     const textarea = this.inlineEditorTextarea;
 
     // Combine title and description
-    const fullContent = node.text && node.text.trim().length > 0
-      ? `${node.title}\n${node.text}`
-      : node.title;
+    let fullText = node.title || "";
+    if (node.text) {
+      fullText = fullText ? `${fullText}\n${node.text}` : node.text;
+    }
+    textarea.value = fullText;
 
-    textarea.value = fullContent;
-    textarea.style.fontFamily =
-      (node.fontFamily || this.liveCanvas.defaultFont) === "sans"
-        ? "'Inter', sans-serif"
-        : "'Shantell Sans', 'Patrick Hand', cursive, sans-serif";
-
+    // Position textarea directly over the node
+    const pad = 4;
+    container.style.left = `${screenRect.x - pad}px`;
+    container.style.top = `${screenRect.y - pad}px`;
+    container.style.width = `${Math.max(screenRect.w + pad * 2, 140)}px`;
+    container.style.height = `${Math.max(screenRect.h + pad * 2, 80)}px`;
     container.style.display = "flex";
-    container.style.left = `${Math.max(10, screenRect.x)}px`;
-    container.style.top = `${Math.max(10, screenRect.y)}px`;
-    container.style.width = `${Math.max(160, screenRect.w)}px`;
-    container.style.height = `${Math.max(70, screenRect.h)}px`;
+
+    // Set matching font
+    const font = node.fontFamily || this.liveCanvas.defaultFont;
+    textarea.style.fontFamily =
+      font === "handwritten" ? "var(--font-hand)" : "var(--font-ui)";
 
     textarea.focus();
-    // Select all text for fast editing
     textarea.select();
   }
 
   private closeInlineEditor() {
-    if (this.activeEditingNodeId) {
-      this.activeEditingNodeId = null;
-      this.inlineEditorContainer.style.display = "none";
-      this.liveCanvas.render();
-    }
+    if (!this.activeEditingNodeId) return;
+    this.activeEditingNodeId = null;
+    this.inlineEditorContainer.style.display = "none";
+    this.liveCanvas.render();
   }
 
   private updateSidebarSelection(node: CanvasNode | null) {
     if (!node) {
       this.colorSwatches.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active"));
       document.querySelectorAll(".status-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".font-btn").forEach((b) => b.classList.remove("active"));
       return;
     }
 
-    // Update active swatch
+    // Update color swatch
+    const color = node.color || "default";
     this.colorSwatches.querySelectorAll(".swatch").forEach((s) => {
-      if (s.getAttribute("data-color") === (node.color || "default")) {
+      if (s.getAttribute("data-color") === color) {
         s.classList.add("active");
       } else {
         s.classList.remove("active");
       }
     });
 
-    // Update active status
+    // Update status button
+    const status = node.status || "none";
     document.querySelectorAll(".status-btn").forEach((b) => {
-      if (b.getAttribute("data-status") === (node.status || "none")) {
+      if (b.getAttribute("data-status") === status) {
         b.classList.add("active");
       } else {
         b.classList.remove("active");
       }
     });
 
-    // Update active font
+    // Update font button
+    const font = node.fontFamily || this.liveCanvas.defaultFont;
     document.querySelectorAll(".font-btn").forEach((b) => {
-      if (b.getAttribute("data-font") === (node.fontFamily || this.liveCanvas.defaultFont)) {
+      if (b.getAttribute("data-font") === font) {
         b.classList.add("active");
       } else {
         b.classList.remove("active");
@@ -412,27 +489,22 @@ class WebviewApp {
     });
   }
 
-  private setActiveTool(tool: ToolMode) {
-    this.liveCanvas.currentTool = tool;
-    document.querySelectorAll("[data-tool]").forEach((btn) => {
+  public setActiveTool(tool: ToolMode) {
+    this.liveCanvas.toolMode = tool;
+    document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((btn) => {
       if (btn.getAttribute("data-tool") === tool) {
         btn.classList.add("active");
       } else {
         btn.classList.remove("active");
       }
     });
-
-    const c = this.liveCanvas.canvas;
-    if (tool === "pan") c.style.cursor = "grab";
-    else if (tool === "eraser") c.style.cursor = "crosshair";
-    else c.style.cursor = "default";
   }
 
   public setFont(font: FontFamily) {
     this.liveCanvas.defaultFont = font;
-    const label = document.getElementById("font-label");
-    if (label) {
-      label.textContent = font === "handwritten" ? "✍ Shantell" : "Clean Sans";
+    const fontLabel = document.getElementById("font-label");
+    if (fontLabel) {
+      fontLabel.textContent = font === "handwritten" ? "✍ Shantell" : "Clean Sans";
     }
     this.liveCanvas.render();
   }
@@ -540,19 +612,50 @@ class WebviewApp {
         case "syncPlan":
           if (msg.plan) {
             this.showLiveSyncPulse();
-            this.liveCanvas.loadPlan(msg.plan, false);
+            const isDifferentFile =
+              Boolean(msg.plan.filename) && msg.plan.filename !== this.activeDiagramName;
+            if (msg.plan.filename) {
+              this.activeDiagramName = msg.plan.filename;
+              this.headerFileBadge.textContent = `📄 ${this.activeDiagramName}`;
+            }
+
+            this.liveCanvas.loadPlan(msg.plan, isDifferentFile);
             if (msg.plan.theme) this.setTheme(msg.plan.theme);
             if (msg.plan.grid) this.setGrid(msg.plan.grid);
             if (msg.plan.fontFamily) this.setFont(msg.plan.fontFamily);
-            if (msg.plan.filename) this.activeDiagramName = msg.plan.filename;
             this.updateZoomDisplay();
           }
           break;
-        case "diagramListUpdate":
-          if (msg.diagrams) {
-            this.renderDiagramsList(msg.diagrams, msg.activeDiagram || this.activeDiagramName);
-          }
+
+        case "diagramListUpdate": {
+          const files = msg.diagrams || [];
+          const details =
+            msg.diagramDetails ||
+            files.map((f) => ({
+              filename: f,
+              title: f.replace(/\.json$/, "").replace(/-/g, " "),
+              nodeCount: 0,
+            }));
+          const workspaces = msg.workspaces || [];
+          const activeWs =
+            msg.activeWorkspace || {
+              name: this.activeWorkspaceName,
+              path: this.activeWorkspacePath,
+              isCurrent: true,
+              diagramCount: files.length,
+            };
+          const activeDiag = msg.activeDiagram || this.activeDiagramName;
+
+          this.updateWorkspacesAndDiagrams(
+            files,
+            details,
+            workspaces,
+            activeWs,
+            activeDiag
+          );
           break;
+        }
+
         case "setTheme":
           if (msg.theme) this.setTheme(msg.theme);
           break;
@@ -573,39 +676,145 @@ class WebviewApp {
     });
   }
 
-  private renderDiagramsList(files: string[], active: string) {
-    this.diagramsList.innerHTML = "";
-    files.forEach((file) => {
+  private updateWorkspacesAndDiagrams(
+    files: string[],
+    details: DiagramFileInfo[],
+    workspaces: WorkspaceInfo[],
+    activeWs: WorkspaceInfo,
+    activeDiagram: string
+  ) {
+    this.activeDiagramName = activeDiagram;
+    this.activeWorkspaceName = activeWs.name;
+    this.activeWorkspacePath = activeWs.path;
+    this.diagramDetails = details;
+    this.availableWorkspaces = workspaces;
+
+    // Update Header Badges
+    this.headerWsBadge.textContent = `📁 ${activeWs.name}`;
+    this.headerFileBadge.textContent = `📄 ${activeDiagram}`;
+    this.sidebarWsName.textContent = activeWs.name;
+
+    // 1. Render Dropdown Workspaces List
+    this.dropdownWorkspacesList.innerHTML = "";
+    workspaces.forEach((ws) => {
       const item = document.createElement("div");
-      item.className = `diagram-item ${file === active ? "active" : ""}`;
+      item.className = `dropdown-item ${ws.isCurrent ? "active" : ""}`;
+      item.title = ws.path;
 
-      const nameSpan = document.createElement("span");
-      nameSpan.className = "diagram-name";
-      nameSpan.textContent = file.replace(/\.json$/, "");
-      nameSpan.title = file;
+      const main = document.createElement("div");
+      main.className = "dropdown-item-main";
+      main.innerHTML = `<span style="color:#38bdf8;">📁</span> <span class="dropdown-item-name">${ws.name}</span>`;
 
-      nameSpan.addEventListener("click", () => {
-        this.vscode.postMessage({
-          type: "switchDiagram",
-          filename: file,
-        });
+      const badge = document.createElement("span");
+      badge.className = "dropdown-item-badge";
+      badge.textContent = `${ws.diagramCount} plan${ws.diagramCount === 1 ? "" : "s"}`;
+
+      item.appendChild(main);
+      item.appendChild(badge);
+
+      item.addEventListener("click", () => {
+        this.closeDropdown();
+        if (!ws.isCurrent) {
+          this.vscode.postMessage({
+            type: "switchWorkspace",
+            workspacePath: ws.path,
+          });
+          this.showTemporaryStatus(`Switching to ${ws.name}...`);
+        }
+      });
+
+      this.dropdownWorkspacesList.appendChild(item);
+    });
+
+    // 2. Render Dropdown Diagrams List
+    this.dropdownDiagramsList.innerHTML = "";
+    details.forEach((d) => {
+      const item = document.createElement("div");
+      const isActive = d.filename === activeDiagram;
+      item.className = `dropdown-item ${isActive ? "active" : ""}`;
+
+      const main = document.createElement("div");
+      main.className = "dropdown-item-main";
+      main.innerHTML = `<span>📄</span> <span class="dropdown-item-name" title="${d.filename}">${d.title}</span>`;
+
+      const badge = document.createElement("span");
+      badge.className = "dropdown-item-badge";
+      badge.textContent = `${d.nodeCount} node${d.nodeCount === 1 ? "" : "s"}`;
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "dropdown-item-del";
+      delBtn.innerHTML = "✕";
+      delBtn.title = `Delete ${d.filename}`;
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete diagram "${d.title}" (${d.filename})? This action cannot be undone.`)) {
+          this.vscode.postMessage({
+            type: "deleteDiagram",
+            filename: d.filename,
+          });
+        }
+      });
+
+      main.addEventListener("click", () => {
+        this.closeDropdown();
+        if (!isActive) {
+          this.vscode.postMessage({
+            type: "switchDiagram",
+            filename: d.filename,
+          });
+          this.showTemporaryStatus(`Loading ${d.title}...`);
+        }
+      });
+
+      item.appendChild(main);
+      item.appendChild(badge);
+      item.appendChild(delBtn);
+      this.dropdownDiagramsList.appendChild(item);
+    });
+
+    // 3. Render Sidebar Diagrams Tab List
+    this.diagramsList.innerHTML = "";
+    details.forEach((d) => {
+      const item = document.createElement("div");
+      const isActive = d.filename === activeDiagram;
+      item.className = `diagram-item ${isActive ? "active" : ""}`;
+
+      const info = document.createElement("div");
+      info.className = "diagram-item-info";
+      info.innerHTML = `
+        <div class="diagram-name">${d.title}</div>
+        <div class="diagram-subtext">
+          <span>📄 ${d.filename}</span>
+          <span>•</span>
+          <span>${d.nodeCount} nodes</span>
+        </div>
+      `;
+
+      info.addEventListener("click", () => {
+        if (!isActive) {
+          this.vscode.postMessage({
+            type: "switchDiagram",
+            filename: d.filename,
+          });
+          this.showTemporaryStatus(`Loading ${d.title}...`);
+        }
       });
 
       const delBtn = document.createElement("button");
       delBtn.className = "diagram-delete-btn";
       delBtn.innerHTML = "✕";
-      delBtn.title = "Delete this diagram";
+      delBtn.title = `Delete ${d.filename}`;
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (confirm(`Delete diagram "${file}"? This action cannot be undone.`)) {
+        if (confirm(`Delete diagram "${d.title}" (${d.filename})? This action cannot be undone.`)) {
           this.vscode.postMessage({
             type: "deleteDiagram",
-            filename: file,
+            filename: d.filename,
           });
         }
       });
 
-      item.appendChild(nameSpan);
+      item.appendChild(info);
       item.appendChild(delBtn);
       this.diagramsList.appendChild(item);
     });
