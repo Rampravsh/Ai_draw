@@ -7,6 +7,10 @@
   "author": "Rampravesh <rampraveshkr4545@gmail.com>",
   "license": "MIT",
   "icon": "dist/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rampravsh/Ai_draw"
+  },
   "keywords": [
     "whiteboard",
     "excalidraw",

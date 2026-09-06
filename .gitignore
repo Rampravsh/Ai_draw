@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 out/
+*.vsix
 
 # Environment and IDE
 .vscode/

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
+import * as os from "os";
 import { LiveSyncService } from "./liveSync";
 import { CanvasPlan, HostToWebviewMessage, WebviewToHostMessage } from "./types";
 
@@ -10,6 +11,9 @@ let statusBarItem: vscode.StatusBarItem | undefined = undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   liveSyncService = new LiveSyncService();
+
+  // Auto-provision the AI Live Draw skill on ANY machine upon extension installation/activation
+  autoProvisionSkill(context);
 
   // Create Status Bar Item
   statusBarItem = vscode.window.createStatusBarItem(
@@ -29,7 +33,6 @@ export function activate(context: vscode.ExtensionContext) {
         type: "syncPlan",
         plan,
       });
-      // Also update diagram list
       currentPanel.webview.postMessage({
         type: "diagramListUpdate",
         diagrams: liveSyncService?.listDiagramFiles(),
@@ -91,12 +94,76 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // Command: Setup AI Assistant Skill
+  const setupSkillCmd = vscode.commands.registerCommand(
+    "aiDraw.setupSkill",
+    () => {
+      const count = autoProvisionSkill(context, true);
+      vscode.window.showInformationMessage(
+        `🎨 AI Live Draw skill successfully configured in ${count} location(s)! Your AI assistant can now live-draw plans in any project.`
+      );
+    }
+  );
+
   context.subscriptions.push(
     openCanvasCmd,
     newPlanCmd,
     clearCanvasCmd,
-    toggleSyncCmd
+    toggleSyncCmd,
+    setupSkillCmd
   );
+}
+
+// Automatically configures the AI Live Draw skill so ANY user's AI assistant immediately detects and uses it
+function autoProvisionSkill(context: vscode.ExtensionContext, showToast: boolean = false): number {
+  let provisionCount = 0;
+  const embeddedSkillPath = path.join(context.extensionPath, "dist", "SKILL.md");
+  let skillContent = "";
+
+  if (fs.existsSync(embeddedSkillPath)) {
+    skillContent = fs.readFileSync(embeddedSkillPath, "utf-8");
+  } else {
+    const srcSkillPath = path.join(context.extensionPath, "src", "resources", "SKILL.md");
+    if (fs.existsSync(srcSkillPath)) {
+      skillContent = fs.readFileSync(srcSkillPath, "utf-8");
+    }
+  }
+
+  if (!skillContent) return 0;
+
+  try {
+    // 1. Install to Global Customizations Root if available (~/.gemini/config/skills)
+    const homeDir = os.homedir();
+    const globalConfigPath = path.join(homeDir, ".gemini", "config");
+    if (fs.existsSync(globalConfigPath)) {
+      const globalSkillsDir = path.join(globalConfigPath, "skills", "ai-live-draw");
+      if (!fs.existsSync(globalSkillsDir)) {
+        fs.mkdirSync(globalSkillsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(globalSkillsDir, "SKILL.md"), skillContent, "utf-8");
+      provisionCount++;
+    }
+
+    // 2. Install to active Workspace (.agents/skills/ai-live-draw)
+    const folders = vscode.workspace.workspaceFolders;
+    if (folders && folders.length > 0) {
+      const wsRoot = folders[0].uri.fsPath;
+      const wsSkillsDir = path.join(wsRoot, ".agents", "skills", "ai-live-draw");
+      if (!fs.existsSync(wsSkillsDir)) {
+        fs.mkdirSync(wsSkillsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(wsSkillsDir, "SKILL.md"), skillContent, "utf-8");
+      provisionCount++;
+    }
+
+    if (showToast) {
+      console.log(`[AI Draw] Auto-provisioned skill in ${provisionCount} location(s)`);
+    }
+  } catch (err) {
+    console.warn("[AI Draw] Failed to auto-provision AI skill:", err);
+  }
+
+  return provisionCount;
 }
 
 function openLiveCanvasPanel(context: vscode.ExtensionContext) {

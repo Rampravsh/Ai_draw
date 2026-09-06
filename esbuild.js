@@ -28,6 +28,12 @@ async function copyStaticAssets() {
   if (fs.existsSync(rootIcon)) {
     fs.copyFileSync(rootIcon, path.join(distDir, "icon.png"));
   }
+
+  // Copy SKILL.md to dist for automatic AI provisioning
+  const skillSrc = path.join(__dirname, "src", "resources", "SKILL.md");
+  if (fs.existsSync(skillSrc)) {
+    fs.copyFileSync(skillSrc, path.join(distDir, "SKILL.md"));
+  }
 }
 
 async function main() {
