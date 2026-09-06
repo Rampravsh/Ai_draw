@@ -1,7 +1,6 @@
 export type NodeType =
   | "card"
   | "step"
-  | "sticky"
   | "decision"
   | "database"
   | "cloud"
@@ -9,6 +8,7 @@ export type NodeType =
   | "capsule"
   | "queue"
   | "actor"
+  | "sticky"
   | "text"
   | "hexagon"
   | "triangle"
@@ -19,13 +19,14 @@ export type NodeType =
   | "mobile"
   | "folder"
   | "shield"
+  | "terminal"
   | "component"
   | "custom"
   | string;
 
-export type NodeStatus = "todo" | "active" | "completed" | "warning" | "error" | "none";
-export type ArrowRouting = "straight" | "curved" | "elbow";
-export type FontFamily = "handwritten" | "sans";
+export type NodeStatus = "todo" | "active" | "completed" | "warning" | "error" | "none" | string;
+export type ArrowRouting = "straight" | "curved" | "elbow" | "zigzag" | string;
+export type FontFamily = "handwritten" | "sans" | string;
 
 export interface CanvasNode {
   id: string;
@@ -36,17 +37,18 @@ export interface CanvasNode {
   height: number;
   title: string;
   text?: string;
-  color?: string; // "default", "blue", "green", "amber", "purple", "rose", "yellow", or custom hex/rgb
+  color?: string; // Preset palette name or ANY hex (#...), rgb(...), hsl(...)
   status?: NodeStatus;
   badge?: string;
   fontFamily?: FontFamily;
-  icon?: string; // custom emoji or icon symbol, e.g. "🚀", "⚡", "🔒", "🐳"
-  svgPath?: string; // custom freeform SVG path d="..."
-  points?: { x: number; y: number }[] | [number, number][]; // custom polygon points
+  icon?: string; // ANY custom emoji or icon symbol, e.g. "🚀", "⚡", "🔒", "🐳", "🧠", "📱"
+  svgPath?: string; // ANY freeform SVG path d="..." for arbitrary vector shapes
+  points?: { x: number; y: number }[] | [number, number][]; // ANY custom polygon points
   strokeWidth?: number;
-  strokeStyle?: "solid" | "dashed" | "dotted";
+  strokeStyle?: "solid" | "dashed" | "dotted" | string;
   customFill?: string;
   customStroke?: string;
+  [key: string]: any; // Completely open for AI creative attributes
 }
 
 export interface CanvasEdge {
@@ -54,10 +56,15 @@ export interface CanvasEdge {
   from: string;
   to: string;
   label?: string;
-  style?: "solid" | "dashed" | "animated";
+  style?: "solid" | "dashed" | "dotted" | "animated" | "neon" | string;
   routing?: ArrowRouting;
   color?: string;
+  strokeWidth?: number;
+  arrowStart?: boolean;
+  arrowEnd?: boolean;
+  bidirectional?: boolean;
   bendOffset?: number; // for curved/elbow bend
+  [key: string]: any; // Completely open for AI creative attributes
 }
 
 export type GridMode = "graph" | "dots" | "blank";

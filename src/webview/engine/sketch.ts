@@ -610,6 +610,32 @@ export class SketchRenderer {
     this.drawJitterCurve(x, y + 8, x, y + h * 0.65, mx, y + h, opts);
   }
 
+  // Draw Terminal / Console window (CLI / Dev Prompt)
+  drawTerminal(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fillColor?: string,
+    opts: StrokeOptions = {}
+  ) {
+    this.drawRect(x, y, w, h, fillColor || "#09090b", opts);
+    const headerHeight = 22;
+    this.drawLine(x, y + headerHeight, x + w, y + headerHeight, { ...opts, roughness: 0.4 });
+    const ctx = this.ctx;
+    ctx.save();
+    ["#ef4444", "#f59e0b", "#22c55e"].forEach((c, i) => {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(x + 10 + i * 8, y + headerHeight * 0.5, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = opts.strokeColor || "#a1a1aa";
+    ctx.font = "bold 11px monospace";
+    ctx.fillText(">_", x + 38, y + headerHeight * 0.65);
+    ctx.restore();
+  }
+
   // Draw Custom Freeform SVG Path (Arbitrary Vector Graphics from AI)
   drawCustomSvgPath(
     x: number,
@@ -747,26 +773,44 @@ export class SketchRenderer {
     ctx.restore();
   }
 
-  // Bendable & Elbow Arrow rendering
+  // Bendable, Elbow, Curved & Freeform Arrow rendering
   drawBendableArrow(
     x1: number,
     y1: number,
     x2: number,
     y2: number,
     label?: string,
-    style: "solid" | "dashed" | "animated" = "solid",
+    style: string = "solid",
     routing: ArrowRouting = "straight",
     color: string = "#94a3b8",
     animOffset: number = 0,
-    fontFamily: FontFamily = "handwritten"
+    fontFamily: FontFamily = "handwritten",
+    options: {
+      strokeWidth?: number;
+      arrowStart?: boolean;
+      arrowEnd?: boolean;
+    } = {}
   ) {
     const ctx = this.ctx;
+    const isDotted = style === "dotted";
+    const isDashed = style === "dashed";
+    const isNeon = style === "neon";
+    const strokeWidth = options.strokeWidth || (isNeon ? 2.5 : 2);
+    const arrowEnd = options.arrowEnd !== false;
+    const arrowStart = Boolean(options.arrowStart);
+
     const opts: StrokeOptions = {
       strokeColor: color,
-      strokeWidth: 2,
+      strokeWidth,
       roughness: 0.85,
-      dash: style === "dashed" ? [6, 4] : [],
+      dash: isDotted ? [2, 3] : isDashed ? [6, 4] : [],
     };
+
+    if (isNeon) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 9;
+    }
 
     let pathPoints: { x: number; y: number }[] = [];
     let endAngle = 0;
@@ -821,18 +865,38 @@ export class SketchRenderer {
       labelMidPoint = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
     }
 
-    // Arrowhead
+    if (isNeon) {
+      ctx.restore();
+    }
+
+    // Target Arrowhead
     const headLen = 14;
     const headAngle = Math.PI / 7;
-    const leftX = x2 - headLen * Math.cos(endAngle - headAngle);
-    const leftY = y2 - headLen * Math.sin(endAngle - headAngle);
-    const rightX = x2 - headLen * Math.cos(endAngle + headAngle);
-    const rightY = y2 - headLen * Math.sin(endAngle + headAngle);
 
-    this.drawLine(x2, y2, leftX, leftY, { strokeColor: color, strokeWidth: 2.2, roughness: 0.7 });
-    this.drawLine(x2, y2, rightX, rightY, { strokeColor: color, strokeWidth: 2.2, roughness: 0.7 });
+    if (arrowEnd) {
+      const leftX = x2 - headLen * Math.cos(endAngle - headAngle);
+      const leftY = y2 - headLen * Math.sin(endAngle - headAngle);
+      const rightX = x2 - headLen * Math.cos(endAngle + headAngle);
+      const rightY = y2 - headLen * Math.sin(endAngle + headAngle);
 
-    // Animated dots along the path
+      this.drawLine(x2, y2, leftX, leftY, { strokeColor: color, strokeWidth: strokeWidth + 0.2, roughness: 0.7 });
+      this.drawLine(x2, y2, rightX, rightY, { strokeColor: color, strokeWidth: strokeWidth + 0.2, roughness: 0.7 });
+    }
+
+    // Source Arrowhead (for Bidirectional / Feedback arrows)
+    if (arrowStart && pathPoints.length >= 2) {
+      const p1 = pathPoints[1];
+      const startAngle = Math.atan2(y1 - p1.y, x1 - p1.x);
+      const leftX = x1 - headLen * Math.cos(startAngle - headAngle);
+      const leftY = y1 - headLen * Math.sin(startAngle - headAngle);
+      const rightX = x1 - headLen * Math.cos(startAngle + headAngle);
+      const rightY = y1 - headLen * Math.sin(startAngle + headAngle);
+
+      this.drawLine(x1, y1, leftX, leftY, { strokeColor: color, strokeWidth: strokeWidth + 0.2, roughness: 0.7 });
+      this.drawLine(x1, y1, rightX, rightY, { strokeColor: color, strokeWidth: strokeWidth + 0.2, roughness: 0.7 });
+    }
+
+    // Animated energy dots along the path
     if (style === "animated" && pathPoints.length >= 2) {
       this.drawAnimatedDotsAlongPath(pathPoints, color, animOffset);
     }

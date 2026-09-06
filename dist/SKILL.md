@@ -3,19 +3,29 @@ name: ai-live-draw
 description: Live-draws architecture diagrams, flowcharts, plans, and step-by-step progress visually onto the AI Live Draw whiteboard extension whenever conversing with the user in the IDE.
 ---
 
-# AI Live Draw Workflow
+# AI Live Draw — Complete Creative Freedom
 
-Use this skill whenever the user asks to draw, visualize, plan, or explain system architecture, flowcharts, task roadmaps, designs, or workflows.
+Whenever the user asks you to explain, visualize, design, architect, or plan anything, **use AI Live Draw to sketch it visually!**
 
-## Critical Instructions (Zero Overhead)
-- **Do NOT scan external directories or search for extension code.**
-- The **AI Live Draw** extension is already active in the IDE.
-- To draw or update the canvas, simply write or edit `.aidraw/plan.json` (or any `.aidraw/<name>.json`) in the **CURRENT active workspace**.
-- The extension's real-time file watcher will immediately detect the file and smoothly render it on the live whiteboard canvas.
+## 🌟 ZERO RESTRICTIONS — YOU HAVE 100% CREATIVE FREEDOM!
+**You are NEVER restricted to a fixed list of shapes, arrows, or styles!**
+Whatever shape, whatever arrow type, whatever vector design, whatever text or styling you need to clearly and beautifully explain your thoughts to the user — **YOU CAN CREATE IT!**
+
+- **Any Shape You Need**: Use standard shapes, extended shapes, or invent ANY shape name you want! If you need a completely custom vector geometry, provide an `svgPath` (standard SVG path string) or polygon `points` `[[x, y], ...]`.
+- **Any Arrow You Need**: Solid, dashed, dotted, animated pulse dots, neon glow, bidirectional (`arrowStart: true`), straight, curved, elbow, or custom routing with custom colors and labels.
+- **Any Text & Icons**: Use any emojis (`⚡`, `🚀`, `🛡️`, `🌐`, `💻`, `🧠`, `💾`, etc.) via `icon`, multi-line descriptions via `text`, custom tags via `badge`, status indicators via `status`.
+- **Any Colors**: Use any hex code (`#6366f1`, `#ec4899`, `#10b981`), RGB, HSL, or preset names (`blue`, `green`, `purple`, `amber`, `rose`, `yellow`). Set custom `customFill`, `customStroke`, `strokeWidth`, and `strokeStyle`.
 
 ---
 
-## Architecture Diagram Specification (`.aidraw/plan.json`)
+## How to Draw (Zero Overhead)
+- **Do NOT scan or search external folders.** The extension is already running in the IDE.
+- Simply write or update `.aidraw/plan.json` (or any `.aidraw/<name>.json`) in the active workspace.
+- The whiteboard canvas file watcher updates and animates in real time!
+
+---
+
+## Drawing Schema & Example
 
 Write directly to `.aidraw/plan.json`:
 
@@ -26,164 +36,160 @@ Write directly to `.aidraw/plan.json`:
   "theme": "dark",
   "grid": "graph",
   "fontFamily": "handwritten",
-  "layout": "auto",
+  "layout": "manual",
   "nodes": [
     {
-      "id": "client-web",
+      "id": "client",
       "type": "browser",
       "x": 60,
-      "y": 100,
+      "y": 80,
       "width": 240,
       "height": 160,
       "icon": "🌐",
-      "title": "Web Dashboard",
-      "text": "React 19 + Tailwind SPA\nLive Canvas Engine",
+      "title": "Web Application",
+      "text": "React 19 + Vite Frontend\nInteractive live canvas",
       "color": "purple",
       "status": "completed",
-      "badge": "CLIENT"
+      "badge": "UI"
     },
     {
-      "id": "gateway-shield",
+      "id": "cli-tool",
+      "type": "terminal",
+      "x": 60,
+      "y": 300,
+      "width": 240,
+      "height": 150,
+      "icon": "💻",
+      "title": "Developer CLI",
+      "text": "agy / npm run dev\nLocal automation scripts",
+      "color": "default"
+    },
+    {
+      "id": "gateway",
       "type": "shield",
-      "x": 360,
-      "y": 105,
+      "x": 370,
+      "y": 85,
       "width": 160,
       "height": 150,
       "icon": "🛡️",
       "title": "API Firewall",
-      "text": "OAuth2 / JWT Auth\nRate Limiting & WAF",
+      "text": "Rate limiting & OAuth2\nReverse proxy guard",
       "color": "green",
       "status": "active",
       "badge": "SECURITY"
     },
     {
-      "id": "server-api",
+      "id": "backend",
       "type": "server",
-      "x": 580,
-      "y": 100,
-      "width": 220,
-      "height": 160,
+      "x": 600,
+      "y": 80,
+      "width": 210,
+      "height": 155,
       "icon": "⚡",
-      "title": "Core API Gateway",
-      "text": "Go / Node Cluster\nWebSocket Realtime Stream",
+      "title": "App Server Cluster",
+      "text": "Node.js / Go microservices\nHigh-throughput async IO",
       "color": "blue",
       "status": "active"
     },
     {
-      "id": "service-worker",
+      "id": "ai-engine",
       "type": "hexagon",
-      "x": 860,
-      "y": 110,
-      "width": 180,
-      "height": 140,
-      "icon": "⚙️",
-      "title": "Worker Engine",
-      "text": "Async Event Consumer\nBackground Sync Pipeline",
+      "x": 880,
+      "y": 85,
+      "width": 190,
+      "height": 145,
+      "icon": "🧠",
+      "title": "AI Inference Core",
+      "text": "LLM agent reasoning\nDynamic diagram generation",
       "color": "amber",
-      "status": "todo"
+      "status": "active",
+      "badge": "AI"
     },
     {
-      "id": "db-storage",
+      "id": "database",
       "type": "database",
-      "x": 590,
-      "y": 340,
+      "x": 605,
+      "y": 320,
       "width": 200,
       "height": 130,
       "icon": "💾",
-      "title": "PostgreSQL DB",
-      "text": "Primary Sharded Cluster\nRead Replicas & Cache",
+      "title": "Database & Cache",
+      "text": "PostgreSQL cluster + Redis\nPersistent storage",
       "color": "purple"
+    },
+    {
+      "id": "custom-shape-example",
+      "type": "custom",
+      "x": 880,
+      "y": 310,
+      "width": 190,
+      "height": 150,
+      "icon": "✨",
+      "title": "Freeform SVG Shape",
+      "text": "Arbitrary vector geometry\nHand-drawn sketch style",
+      "svgPath": "M 20 20 L 170 20 L 180 80 L 170 140 L 20 140 L 10 80 Z",
+      "customFill": "#1e1b4b",
+      "customStroke": "#818cf8"
     }
   ],
   "edges": [
     {
-      "from": "client-web",
-      "to": "gateway-shield",
+      "from": "client",
+      "to": "gateway",
       "label": "HTTPS REST / WSS",
       "style": "animated",
       "routing": "straight"
     },
     {
-      "from": "gateway-shield",
-      "to": "server-api",
-      "label": "Verified Token",
+      "from": "cli-tool",
+      "to": "gateway",
+      "label": "gRPC / IPC",
+      "style": "dashed",
+      "routing": "curved"
+    },
+    {
+      "from": "gateway",
+      "to": "backend",
+      "label": "Authenticated",
       "style": "animated",
       "routing": "straight"
     },
     {
-      "from": "server-api",
-      "to": "service-worker",
-      "label": "Enqueue Job",
-      "style": "animated",
+      "from": "backend",
+      "to": "ai-engine",
+      "label": "Task Dispatch",
+      "style": "neon",
       "routing": "straight"
     },
     {
-      "from": "server-api",
-      "to": "db-storage",
+      "from": "backend",
+      "to": "database",
       "label": "Queries / Mutations",
       "style": "animated",
-      "routing": "elbow"
+      "routing": "elbow",
+      "bidirectional": true
     }
   ],
-  "updatedAt": "2026-09-06T12:00:00.000Z"
+  "updatedAt": "2026-09-06T20:30:00.000Z"
 }
 ```
 
 ---
 
-## Node Types Reference
+## Inspiration Guide (Use Any of These or Invent Your Own!)
 
-### 1. Standard Shapes
-- `card`: Standard process card / service box.
-- `decision`: Diamond branching node for conditionals and gates.
-- `database`: Database cylinder storage.
-- `cloud`: Cloud cluster / Kubernetes / external services.
-- `circle`: State machine circle, status bubble, or event start/end.
-- `capsule`: Pill shape for API endpoints, HTTP routes, or micro-actions.
-- `queue`: Message queue / task buffer with divider lines (RabbitMQ, Redis, Kafka).
-- `actor`: User stick figure representing humans, clients, or operators.
-- `sticky`: Hand-drawn sticky post-it note with folded corner.
-- `text`: Plain floating label or annotation without boundary.
+### Shapes You Can Use or Create:
+- **Built-in shapes**: `card`, `server`, `browser`, `terminal`, `shield`, `hexagon`, `database`, `cloud`, `queue`, `actor`, `mobile`, `folder`, `circle`, `capsule`, `decision`, `triangle`, `parallelogram`, `trapezoid`, `sticky`, `text`.
+- **Friendly aliases supported automatically**: `db`, `disk`, `storage`, `k8s`, `kubernetes`, `cluster`, `network`, `firewall`, `security`, `auth`, `web`, `ui`, `frontend`, `phone`, `app`, `user`, `person`, `client`, `console`, `cli`, `bash`, `rack`, `host`, `backend`, `diamond`, `condition`, `pill`, `endpoint`, `stream`, `kafka`, `package`, `directory`, `module`.
+- **Arbitrary Custom Shapes**: If you want a shape that doesn't exist, just provide `svgPath` (any SVG path string) or `points` (polygon coordinates), or use any name you like and the engine will gracefully draw it with your custom styles!
 
-### 2. Extended Architecture Shapes
-- `hexagon`: Hexagonal microservice, orchestrator, or domain entity.
-- `server`: Server rack enclosure with LED blink status indicators.
-- `browser`: Web browser desktop application mockup with traffic light controls.
-- `mobile`: Smartphone device enclosure with camera notch and home bar.
-- `folder`: Directory module, code package, or component library.
-- `shield`: Security firewall, authorization barrier, or compliance gateway.
-- `triangle`: Warning, critical risk, or delta indicator.
-- `parallelogram`: Data input/output streams, file feeds.
-- `trapezoid`: Manual operation, transformation filter, or pipeline step.
+### Arrow Styles You Can Use:
+- `style`: `"animated"` (live energy particle dots), `"solid"`, `"dashed"`, `"dotted"`, `"neon"` (glowing stroke).
+- `routing`: `"straight"` (direct point-to-point), `"elbow"` (clean right-angle 90° bends), `"curved"` (smooth bezier arc).
+- `bidirectional`: `true` (or `arrowStart: true`) for two-way or request-response flows.
+- `strokeWidth`: Any thickness (e.g. `1.5`, `2`, `3`, `4`).
+- `color`: Any color or preset name.
+- `label`: Any descriptive text along the arrow.
 
-### 3. AI Custom Shapes & Vector Graphics (Infinite Possibilities!)
-You can create ANY arbitrary custom geometric design using:
-- **`svgPath`**: SVG path command string (e.g. `"M 0 50 L 50 0 L 150 0 L 200 50 L 150 100 L 50 100 Z"`). Renders natively with hand-drawn styling and transforms to the node's `x, y` position!
-- **`points`**: Array of polygon coordinate pairs `[[x1, y1], [x2, y2], ...]` or `[{x: x1, y: y1}, ...]` relative to the node.
-
----
-
-## Custom Styling & Node Attributes
-
-- **`icon`**: An emoji or symbol (e.g. `"⚡"`, `"🔒"`, `"💻"`, `"🌐"`, `"📱"`, `"🛡️"`, `"🚀"`, `"🧠"`, `"💾"`) rendered in the title bar.
-- **`color`**: Preset theme (`"blue"`, `"green"`, `"amber"`, `"purple"`, `"rose"`, `"yellow"`, `"default"`) OR any custom hex/rgb code (`"#3b82f6"`, `"#10b981"`).
-- **`customFill`**: Specific background fill color string (e.g. `"#1e1b4b"`, `"rgba(99, 102, 241, 0.15)"`).
-- **`customStroke`**: Specific outline/stroke color string (e.g. `"#6366f1"`).
-- **`strokeWidth`**: Line thickness (e.g. `1`, `2`, `3`).
-- **`strokeStyle`**: `"solid"`, `"dashed"`, or `"dotted"`.
-- **`status`**: `"todo"`, `"active"`, `"completed"`, `"warning"`, `"error"`, or `"none"`.
-- **`badge`**: Custom pill text at top-right (e.g. `"STEP 1"`, `"PORT 3000"`, `"V2"`).
-
----
-
-## Arrow Styles & Routing
-
-- **`style`**:
-  - `"animated"`: Flowing particles/energy dots along the arrow path (great for live processes!).
-  - `"solid"`: Continuous hand-drawn line.
-  - `"dashed"`: Dashed connector.
-- **`routing`**:
-  - `"elbow"`: Clean 90-degree orthogonal bends (best for architecture diagrams).
-  - `"curved"`: Smooth quadratic bezier curve.
-  - `"straight"`: Direct point-to-point line.
-- **`label`**: Contextual label rendered along the arrow midpoint.
+### Creative Freedom Tip:
+Always make diagrams informative, clear, colorful, and alive. Use icons (`icon`), badges (`badge`), and statuses (`status: "completed" | "active" | "todo" | "warning" | "error"`) to make your architecture and plans engaging!

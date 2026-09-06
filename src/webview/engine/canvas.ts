@@ -518,7 +518,12 @@ export class LiveCanvas {
               edge.routing || "straight",
               arrowColor,
               this.animOffset,
-              this.defaultFont
+              this.defaultFont,
+              {
+                strokeWidth: edge.strokeWidth,
+                arrowStart: edge.arrowStart || edge.bidirectional,
+                arrowEnd: edge.arrowEnd !== false,
+              }
             );
           }
         }
@@ -642,6 +647,8 @@ export class LiveCanvas {
           break;
 
         case "decision":
+        case "diamond":
+        case "condition":
           this.renderer.drawDiamond(
             node.x,
             node.y,
@@ -653,6 +660,9 @@ export class LiveCanvas {
           break;
 
         case "database":
+        case "db":
+        case "disk":
+        case "storage":
           this.renderer.drawCylinder(
             node.x,
             node.y,
@@ -664,6 +674,10 @@ export class LiveCanvas {
           break;
 
         case "cloud":
+        case "k8s":
+        case "kubernetes":
+        case "cluster":
+        case "network":
           this.renderer.drawCloud(
             node.x,
             node.y,
@@ -686,6 +700,8 @@ export class LiveCanvas {
           break;
 
         case "capsule":
+        case "pill":
+        case "endpoint":
           this.renderer.drawCapsule(
             node.x,
             node.y,
@@ -697,6 +713,9 @@ export class LiveCanvas {
           break;
 
         case "queue":
+        case "stream":
+        case "buffer":
+        case "kafka":
           this.renderer.drawQueue(
             node.x,
             node.y,
@@ -708,6 +727,9 @@ export class LiveCanvas {
           break;
 
         case "actor":
+        case "user":
+        case "person":
+        case "client":
           this.renderer.drawActor(
             node.x,
             node.y,
@@ -763,6 +785,9 @@ export class LiveCanvas {
           break;
 
         case "server":
+        case "rack":
+        case "host":
+        case "backend":
           this.renderer.drawServer(
             node.x,
             node.y,
@@ -774,6 +799,9 @@ export class LiveCanvas {
           break;
 
         case "browser":
+        case "web":
+        case "ui":
+        case "frontend":
           this.renderer.drawBrowser(
             node.x,
             node.y,
@@ -785,6 +813,8 @@ export class LiveCanvas {
           break;
 
         case "mobile":
+        case "phone":
+        case "app":
           this.renderer.drawMobile(
             node.x,
             node.y,
@@ -796,6 +826,9 @@ export class LiveCanvas {
           break;
 
         case "folder":
+        case "package":
+        case "directory":
+        case "module":
           this.renderer.drawFolder(
             node.x,
             node.y,
@@ -807,7 +840,24 @@ export class LiveCanvas {
           break;
 
         case "shield":
+        case "firewall":
+        case "security":
+        case "auth":
           this.renderer.drawShield(
+            node.x,
+            node.y,
+            node.width,
+            node.height,
+            fillColor,
+            strokeOpts
+          );
+          break;
+
+        case "terminal":
+        case "console":
+        case "cli":
+        case "bash":
+          this.renderer.drawTerminal(
             node.x,
             node.y,
             node.width,
