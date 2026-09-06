@@ -6,6 +6,7 @@ import {
   ThemeMode,
   NodeType,
   FontFamily,
+  TextLevel,
   ArrowRouting,
 } from "../../types";
 import { SketchRenderer } from "./sketch";
@@ -14,6 +15,7 @@ import { autoLayoutNodes, getArrowEndpoints } from "./layout";
 export type ToolMode =
   | "select"
   | "pan"
+  | "text"
   | "arrow"
   | "eraser";
 
@@ -89,6 +91,7 @@ export class LiveCanvas {
     node: CanvasNode,
     screenRect: { x: number; y: number; w: number; h: number }
   ) => void;
+  private onToolChangeCallback?: (tool: ToolMode) => void;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -137,6 +140,10 @@ export class LiveCanvas {
     ) => void
   ) {
     this.onInlineEditTriggerCallback = cb;
+  }
+
+  public setOnToolChange(cb: (tool: ToolMode) => void) {
+    this.onToolChangeCallback = cb;
   }
 
   public resize() {
@@ -258,6 +265,7 @@ export class LiveCanvas {
       this.notifySelectionChange(null);
     }
     this.updateCursor();
+    this.onToolChangeCallback?.(tool);
     this.render();
   }
 
@@ -265,6 +273,8 @@ export class LiveCanvas {
     const c = this.canvas;
     if (this.currentTool === "pan") {
       c.style.cursor = this.isDragging ? "grabbing" : "grab";
+    } else if (this.currentTool === "text") {
+      c.style.cursor = "text";
     } else if (this.currentTool === "arrow") {
       c.style.cursor = "crosshair";
     } else if (this.currentTool === "eraser") {
@@ -478,23 +488,30 @@ export class LiveCanvas {
   }
 
   private autoFitNodeHeight(node: CanvasNode) {
-    const paddingX = 14;
-    const maxW = Math.max(50, node.width - paddingX * 2);
-    let totalLines = 1;
+    const isText = node.type === "text";
+    const paddingX = isText ? 6 : 14;
+    const maxW = Math.max(30, node.width - paddingX * 2);
+    const level: TextLevel = node.textLevel || "p";
 
+    const titleLineHeight = level === "h1" ? 34 : level === "h2" ? 28 : level === "h3" ? 24 : 20;
+    const bodyLineHeight = level === "h1" ? 26 : level === "h2" ? 22 : level === "h3" ? 18 : 17;
+    const charW = level === "h1" ? 14 : level === "h2" ? 11 : level === "h3" ? 9 : 8;
+
+    let totalHeight = isText ? 12 : 40;
     if (node.title) {
-      totalLines += Math.max(1, Math.ceil((node.title.length * 9) / maxW));
+      const lines = Math.max(1, Math.ceil((node.title.length * charW) / maxW));
+      totalHeight += lines * titleLineHeight;
     }
     if (node.text) {
       const paras = node.text.split("\n");
       for (const p of paras) {
-        totalLines += Math.max(1, Math.ceil((p.length * 8) / maxW));
+        const lines = Math.max(1, Math.ceil((p.length * (charW - 1)) / maxW));
+        totalHeight += lines * bodyLineHeight;
       }
     }
 
-    const minH = totalLines * 22 + 40;
-    if (node.height < minH) {
-      node.height = minH;
+    if (node.height < totalHeight) {
+      node.height = totalHeight;
     }
   }
 
@@ -913,6 +930,10 @@ export class LiveCanvas {
     // Check 3: Standard & Extended Architecture Shapes
     else {
       switch (node.type) {
+        case "text":
+          // Freestanding plain text: no background shape or card outline
+          break;
+
         case "sticky":
           this.renderer.drawStickyNote(
             node.x,
@@ -1216,12 +1237,15 @@ export class LiveCanvas {
     ctx.restore();
   }
 
-  private drawNodeContent(node: CanvasNode, textColor: string, font: FontFamily) {
+  private drawNodeContent(node: CanvasNode, defaultTextColor: string, font: FontFamily) {
     const isSticky = node.type === "sticky";
-    const paddingX = 14;
+    const isText = node.type === "text";
+    const paddingX = isText ? 6 : 14;
     let currentY =
       node.y +
-      (isSticky
+      (isText
+        ? 6
+        : isSticky
         ? 14
         : node.type === "browser"
         ? 34
@@ -1235,9 +1259,53 @@ export class LiveCanvas {
     const hasIcon = Boolean(node.icon);
     const iconWidth = hasIcon ? 28 : 0;
 
+    // Resolve text color:
+    // If node.textColor is set, use it directly.
+    // For plain text nodes, if node.color is set to a palette name, use its vibrant border/accent color.
+    // Otherwise fallback to defaultTextColor.
+    const colors = this.resolveColor(node.color || "default", this.theme === "dark");
+    const textColor =
+      node.textColor ||
+      (isText && node.color && node.color !== "default" ? colors.border : defaultTextColor);
+
+    // Typography sizing levels: h1, h2, h3, p
+    const level: TextLevel = node.textLevel || "p";
+    let titleFontSize = 17;
+    let titleLineHeight = 21;
+    let bodyFontSize = 14;
+    let bodyLineHeight = 18;
+
+    switch (level) {
+      case "h1":
+        titleFontSize = 28;
+        titleLineHeight = 34;
+        bodyFontSize = 19;
+        bodyLineHeight = 25;
+        break;
+      case "h2":
+        titleFontSize = 22;
+        titleLineHeight = 28;
+        bodyFontSize = 16;
+        bodyLineHeight = 22;
+        break;
+      case "h3":
+        titleFontSize = 18;
+        titleLineHeight = 24;
+        bodyFontSize = 14;
+        bodyLineHeight = 19;
+        break;
+      case "p":
+      default:
+        titleFontSize = 16;
+        titleLineHeight = 21;
+        bodyFontSize = 13;
+        bodyLineHeight = 18;
+        break;
+    }
+
     if (hasIcon) {
       this.ctx.save();
-      this.ctx.font = "20px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif";
+      this.ctx.font = `${Math.max(20, titleFontSize)}px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif`;
       this.ctx.textAlign = "left";
       this.ctx.textBaseline = "top";
       this.ctx.fillText(node.icon!, node.x + paddingX, currentY);
@@ -1250,15 +1318,15 @@ export class LiveCanvas {
         node.x + paddingX + iconWidth,
         currentY,
         maxW - (node.status && node.status !== "none" ? 55 : 0) - iconWidth,
-        19,
-        17,
+        titleLineHeight,
+        titleFontSize,
         textColor,
         "bold",
         font
       );
-      currentY += 4;
+      currentY += isText ? 2 : 4;
     } else if (hasIcon) {
-      currentY += 26;
+      currentY += titleLineHeight + 4;
     }
 
     if (node.text) {
@@ -1267,8 +1335,8 @@ export class LiveCanvas {
         node.x + paddingX,
         currentY,
         maxW,
-        17,
-        14,
+        bodyLineHeight,
+        bodyFontSize,
         textColor,
         "normal",
         font
@@ -1397,6 +1465,41 @@ export class LiveCanvas {
         this.hasErasedInCurrentStroke = false;
         this.eraserTrail = [{ x: world.x, y: world.y }];
         this.eraseAtPoint(world.x, world.y);
+        return;
+      }
+
+      // TEXT TOOL (Click anywhere to place text or edit clicked node)
+      if (this.currentTool === "text") {
+        const hit = this.findNodeAt(world.x, world.y);
+        if (hit) {
+          this.setSelectedNodeId(hit.id);
+          this.setTool("select");
+          const screenTopLeft = this.worldToScreen(hit.x, hit.y);
+          if (this.onInlineEditTriggerCallback) {
+            this.onInlineEditTriggerCallback(hit, {
+              x: screenTopLeft.x,
+              y: screenTopLeft.y,
+              w: hit.width * this.zoom,
+              h: hit.height * this.zoom,
+            });
+          }
+        } else {
+          const newNode = this.createNodeAt("text", world.x + 80, world.y + 20);
+          newNode.title = "Text";
+          newNode.text = "";
+          newNode.textLevel = "p";
+          this.setSelectedNodeId(newNode.id);
+          this.setTool("select");
+          const screenTopLeft = this.worldToScreen(newNode.x, newNode.y);
+          if (this.onInlineEditTriggerCallback) {
+            this.onInlineEditTriggerCallback(newNode, {
+              x: screenTopLeft.x,
+              y: screenTopLeft.y,
+              w: newNode.width * this.zoom,
+              h: newNode.height * this.zoom,
+            });
+          }
+        }
         return;
       }
 
@@ -1610,6 +1713,9 @@ export class LiveCanvas {
       if (this.currentTool === "eraser") {
         c.style.cursor = "cell";
         return;
+      } else if (this.currentTool === "text") {
+        c.style.cursor = "text";
+        return;
       } else if (this.currentTool === "arrow") {
         c.style.cursor = "crosshair";
         return;
@@ -1772,6 +1878,22 @@ export class LiveCanvas {
             y: screenTopLeft.y,
             w: screenW,
             h: screenH,
+          });
+        }
+      } else {
+        // Double-clicked on blank canvas: create freestanding text node at click point
+        const newNode = this.createNodeAt("text", world.x + 80, world.y + 20);
+        newNode.title = "Text";
+        newNode.text = "";
+        newNode.textLevel = "p";
+        this.setSelectedNodeId(newNode.id);
+        const screenTopLeft = this.worldToScreen(newNode.x, newNode.y);
+        if (this.onInlineEditTriggerCallback) {
+          this.onInlineEditTriggerCallback(newNode, {
+            x: screenTopLeft.x,
+            y: screenTopLeft.y,
+            w: newNode.width * this.zoom,
+            h: newNode.height * this.zoom,
           });
         }
       }
@@ -1944,10 +2066,11 @@ export class LiveCanvas {
         color = "green";
         break;
       case "text":
-        width = 200;
-        height = 50;
-        title = "Annotation";
+        width = 160;
+        height = 40;
+        title = "Text";
         text = "";
+        color = "default";
         break;
     }
 
@@ -1962,6 +2085,7 @@ export class LiveCanvas {
       text,
       color,
       status: type === "card" || type === "step" ? "active" : "none",
+      textLevel: "p",
     };
 
     this.plan.nodes.push(newNode);

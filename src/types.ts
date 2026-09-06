@@ -27,6 +27,7 @@ export type NodeType =
 export type NodeStatus = "todo" | "active" | "completed" | "warning" | "error" | "none" | string;
 export type ArrowRouting = "straight" | "curved" | "elbow" | "zigzag" | string;
 export type FontFamily = "handwritten" | "sans" | string;
+export type TextLevel = "h1" | "h2" | "h3" | "p";
 
 export interface CanvasNode {
   id: string;
@@ -41,6 +42,8 @@ export interface CanvasNode {
   status?: NodeStatus;
   badge?: string;
   fontFamily?: FontFamily;
+  textLevel?: TextLevel; // "h1" (32px), "h2" (24px), "h3" (18px), "p" (14px)
+  textColor?: string; // Custom direct text color
   icon?: string; // ANY custom emoji or icon symbol, e.g. "🚀", "⚡", "🔒", "🐳", "🧠", "📱"
   svgPath?: string; // ANY freeform SVG path d="..." for arbitrary vector shapes
   points?: { x: number; y: number }[] | [number, number][]; // ANY custom polygon points

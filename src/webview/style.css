@@ -503,13 +503,15 @@ body.theme-light #inline-text-editor {
 .swatch.yellow { background-color: #facc15; }
 
 .status-buttons,
-.font-buttons {
+.font-buttons,
+.text-level-buttons {
   display: flex;
   gap: 6px;
 }
 
 .status-btn,
-.font-btn {
+.font-btn,
+.level-btn {
   flex: 1;
   padding: 5px 4px;
   background-color: var(--bg-card);
@@ -522,16 +524,19 @@ body.theme-light #inline-text-editor {
 }
 
 .status-btn:hover,
-.font-btn:hover {
+.font-btn:hover,
+.level-btn:hover {
   background-color: var(--bg-btn-hover);
   color: var(--text-primary);
 }
 
 .status-btn.active,
-.font-btn.active {
+.font-btn.active,
+.level-btn.active {
   border-color: #38bdf8;
   color: #38bdf8;
   font-weight: 600;
+  background-color: rgba(56, 189, 248, 0.1);
 }
 
 .inspector-actions {

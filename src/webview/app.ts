@@ -9,6 +9,7 @@ import {
   ThemeMode,
   NodeType,
   FontFamily,
+  TextLevel,
   NodeStatus,
   DiagramFileInfo,
   WorkspaceInfo,
@@ -92,6 +93,10 @@ class WebviewApp {
         this.openInlineEditor(node, screenRect);
       }
     );
+
+    this.liveCanvas.setOnToolChange((tool) => {
+      this.setActiveTool(tool, false);
+    });
 
     this.setupToolbar();
     this.setupSidebar();
@@ -299,6 +304,18 @@ class WebviewApp {
       });
     });
 
+    // Typography Level Buttons Click (H1, H2, H3, P)
+    document.querySelectorAll<HTMLButtonElement>(".level-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const level = btn.getAttribute("data-level") as TextLevel;
+        document.querySelectorAll(".level-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        if (this.liveCanvas.selectedNodeId) {
+          this.liveCanvas.updateSelectedNode({ textLevel: level });
+        }
+      });
+    });
+
     // Duplicate & Delete Node
     document.getElementById("btn-duplicate-node")?.addEventListener("click", () => {
       this.liveCanvas.duplicateSelectedNode();
@@ -439,10 +456,28 @@ class WebviewApp {
     container.style.height = `${Math.max(screenRect.h + pad * 2, 80)}px`;
     container.style.display = "flex";
 
-    // Set matching font
+    // Set matching font and typography level
     const font = node.fontFamily || this.liveCanvas.defaultFont;
     textarea.style.fontFamily =
       font === "handwritten" ? "var(--font-hand)" : "var(--font-ui)";
+
+    const level = node.textLevel || "p";
+    const fontSize = level === "h1" ? "24px" : level === "h2" ? "20px" : level === "h3" ? "17px" : "14px";
+    textarea.style.fontSize = fontSize;
+    textarea.style.lineHeight = level === "h1" ? "30px" : level === "h2" ? "25px" : level === "h3" ? "22px" : "19px";
+    textarea.style.fontWeight = level === "p" ? "500" : "700";
+
+    if (node.textColor) {
+      textarea.style.color = node.textColor;
+    } else {
+      const isDark = this.liveCanvas.theme === "dark";
+      const colors = (this.liveCanvas as any).resolveColor(node.color || "default", isDark);
+      if (node.type === "text" && node.color && node.color !== "default" && colors) {
+        textarea.style.color = colors.border;
+      } else {
+        textarea.style.color = isDark ? "#f4f4f5" : "#18181b";
+      }
+    }
 
     textarea.focus();
     textarea.select();
@@ -460,6 +495,7 @@ class WebviewApp {
       this.colorSwatches.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active"));
       document.querySelectorAll(".status-btn").forEach((b) => b.classList.remove("active"));
       document.querySelectorAll(".font-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".level-btn").forEach((b) => b.classList.remove("active"));
       return;
     }
 
@@ -492,10 +528,22 @@ class WebviewApp {
         b.classList.remove("active");
       }
     });
+
+    // Update typography level button (H1, H2, H3, P)
+    const level = node.textLevel || "p";
+    document.querySelectorAll(".level-btn").forEach((b) => {
+      if (b.getAttribute("data-level") === level) {
+        b.classList.add("active");
+      } else {
+        b.classList.remove("active");
+      }
+    });
   }
 
-  public setActiveTool(tool: ToolMode) {
-    this.liveCanvas.setTool(tool);
+  public setActiveTool(tool: ToolMode, syncCanvas: boolean = true) {
+    if (syncCanvas) {
+      this.liveCanvas.setTool(tool);
+    }
     document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((btn) => {
       if (btn.getAttribute("data-tool") === tool) {
         btn.classList.add("active");
@@ -594,6 +642,9 @@ class WebviewApp {
           break;
         case "a":
           this.setActiveTool("arrow");
+          break;
+        case "t":
+          this.setActiveTool("text");
           break;
         case "e":
           this.setActiveTool("eraser");

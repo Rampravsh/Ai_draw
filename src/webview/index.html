@@ -40,6 +40,10 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8M6 14v-1a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6a7 7 0 0 0 7 7h3a8 8 0 0 0 8-8v-5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2"/></svg>
           <span>Pan</span>
         </button>
+        <button class="tool-btn" data-tool="text" title="Freestanding Text (T / Double-click canvas)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          <span>Text</span>
+        </button>
         <button class="tool-btn" data-tool="arrow" title="Connect Arrow (A)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           <span>Arrow</span>
@@ -129,6 +133,10 @@
           <div class="pane-subhint">Click to morph selected node, or drag onto canvas</div>
 
           <div class="shapes-grid">
+            <button class="shape-card" draggable="true" data-shape="text" title="Freestanding Plain Text (No box/border)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              <span>Plain Text</span>
+            </button>
             <button class="shape-card" draggable="true" data-shape="card" title="Drag to canvas or click to morph selected">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
               <span>Step Card</span>
@@ -186,6 +194,14 @@
               <button class="status-btn" data-status="todo">Todo</button>
               <button class="status-btn" data-status="active">Active</button>
               <button class="status-btn" data-status="completed">Done</button>
+            </div>
+
+            <div class="pane-title" style="margin-top: 14px;">Typography Size</div>
+            <div class="text-level-buttons" id="text-level-buttons">
+              <button class="level-btn" data-level="h1" title="Heading 1 (Hero Title)">H1</button>
+              <button class="level-btn" data-level="h2" title="Heading 2 (Section Title)">H2</button>
+              <button class="level-btn" data-level="h3" title="Heading 3 (Subheader)">H3</button>
+              <button class="level-btn active" data-level="p" title="Paragraph / Body">P</button>
             </div>
 
             <div class="pane-title" style="margin-top: 14px;">Node Font</div>

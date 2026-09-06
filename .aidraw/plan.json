@@ -5,66 +5,7 @@
   "grid": "graph",
   "fontFamily": "handwritten",
   "layout": "manual",
-  "nodes": [
-    {
-      "id": "node-1",
-      "type": "browser",
-      "x": 80,
-      "y": 100,
-      "width": 240,
-      "height": 160,
-      "icon": "🌐",
-      "title": "Frontend Client",
-      "text": "Try Arrow tool: Drag from here\nacross to the Server!",
-      "color": "purple",
-      "status": "active",
-      "badge": "DRAG ME"
-    },
-    {
-      "id": "node-2",
-      "type": "server",
-      "x": 480,
-      "y": 100,
-      "width": 220,
-      "height": 160,
-      "icon": "⚡",
-      "title": "App Server",
-      "text": "Click the arrow to select it,\nthen drag its handles to resize!",
-      "color": "blue",
-      "status": "completed"
-    },
-    {
-      "id": "node-3",
-      "type": "database",
-      "x": 490,
-      "y": 340,
-      "width": 200,
-      "height": 130,
-      "icon": "💾",
-      "title": "Database",
-      "text": "Select Erase tool (E)\nand swipe across to delete!",
-      "color": "green",
-      "status": "completed"
-    }
-  ],
-  "edges": [
-    {
-      "id": "edge-1",
-      "from": "node-1",
-      "to": "node-2",
-      "label": "Click to select & resize!",
-      "style": "animated",
-      "routing": "straight"
-    },
-    {
-      "id": "edge-2",
-      "from": "node-2",
-      "to": "node-3",
-      "label": "Swipe to Erase",
-      "style": "animated",
-      "routing": "elbow",
-      "bidirectional": true
-    }
-  ],
-  "updatedAt": "2026-09-06T20:50:00.000Z"
+  "nodes": [],
+  "edges": [],
+  "updatedAt": "2026-09-06T15:41:30.531Z"
 }
